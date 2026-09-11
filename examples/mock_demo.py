@@ -6,7 +6,6 @@ import time
 
 from aimo3_inference import AttemptContext, AttemptResult, InferenceOrchestrator, SolverConfig
 
-
 ANSWERS = (42, 42, 17, 42, 42, 9, 42, None)
 ENTROPIES = (0.30, 0.32, 0.90, 0.28, 0.35, 1.10, 0.29, float("inf"))
 

@@ -1,0 +1,42 @@
+name: Bug report
+description: Report a reproducible problem in the inference or evaluation system
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include credentials, private problems, or chain-of-thought.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the observed and expected behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      description: Include a small public input, command, and sanitized output.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Package or commit version
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Python, OS, backend, model, and server version when relevant.
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed credentials, private data, and model reasoning from this report.
+          required: true

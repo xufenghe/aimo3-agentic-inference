@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
+  <title id="title">AIMO3 Agentic Inference</title>
+  <desc id="desc">Parallel mathematical reasoning paths feed Python verification and calibrated consensus.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#07111f"/><stop offset="0.55" stop-color="#10294a"/><stop offset="1" stop-color="#0d4b4b"/></linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#60a5fa"/><stop offset="1" stop-color="#34d399"/></linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="1200" height="360" rx="28" fill="url(#bg)"/>
+  <g opacity="0.16" stroke="#93c5fd"><path d="M0 72H1200M0 144H1200M0 216H1200M0 288H1200"/><path d="M120 0V360M240 0V360M360 0V360M480 0V360M600 0V360M720 0V360M840 0V360M960 0V360M1080 0V360"/></g>
+  <g transform="translate(72 70)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="92" cy="110" r="72" stroke="#60a5fa" stroke-width="4" opacity="0.45"/>
+    <path d="M40 110L76 74L110 108L145 61M40 110L76 146L110 112L148 159" stroke="url(#accent)" stroke-width="8" filter="url(#glow)"/>
+    <circle cx="40" cy="110" r="9" fill="#60a5fa"/><circle cx="76" cy="74" r="9" fill="#93c5fd"/><circle cx="76" cy="146" r="9" fill="#93c5fd"/><circle cx="110" cy="108" r="11" fill="#f8fafc"/><circle cx="145" cy="61" r="9" fill="#34d399"/><circle cx="148" cy="159" r="9" fill="#34d399"/>
+  </g>
+  <text x="300" y="142" fill="#f8fafc" font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif" font-size="56" font-weight="750" letter-spacing="-1">AIMO3 Agentic Inference</text>
+  <text x="304" y="194" fill="#bfdbfe" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="21">parallel reasoning · Python verification · calibrated consensus</text>
+  <rect x="304" y="229" width="580" height="3" rx="1.5" fill="url(#accent)"/>
+  <text x="304" y="276" fill="#a7f3d0" font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif" font-size="19">Inspectable. Deadline-aware. Backend-neutral.</text>
+</svg>

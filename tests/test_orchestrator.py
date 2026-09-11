@@ -10,6 +10,20 @@ from aimo3_inference import (
 
 
 class InferenceOrchestratorTests(unittest.TestCase):
+    def test_total_deadline_does_not_wait_for_slow_attempt(self) -> None:
+        def runner(context: AttemptContext) -> AttemptResult:
+            time.sleep(0.2)
+            return AttemptResult(attempt_id=context.attempt_id, answer=1)
+
+        started = time.monotonic()
+        outcome = InferenceOrchestrator(
+            SolverConfig(attempts=1, workers=1, early_stop=1)
+        ).solve(runner, deadline=time.monotonic() + 0.02)
+
+        self.assertLess(time.monotonic() - started, 0.15)
+        self.assertEqual(outcome.stop_reason, "deadline")
+        self.assertIsNone(outcome.answer)
+
     def test_stops_after_consensus(self) -> None:
         def runner(context: AttemptContext) -> AttemptResult:
             time.sleep(context.attempt_id * 0.002)
