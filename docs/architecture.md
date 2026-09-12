@@ -1,6 +1,6 @@
 # Architecture
 
-The system separates model-dependent generation from backend-neutral control logic. That separation is the main design constraint: each policy can be tested with a deterministic fake before spending GPU time.
+There are two layers. The runner talks to the model and handles tool calls. The orchestrator only knows about attempts, deadlines, and answers. Keeping those apart lets the control logic run in tests without a GPU.
 
 ## Request lifecycle
 
@@ -16,15 +16,15 @@ The system separates model-dependent generation from backend-neutral control log
 
 ### `ChatBackend`
 
-A backend accepts messages and generation settings and returns a normalized `ChatCompletion`. Implement this protocol to connect a different transport without changing the reasoning loop.
+A backend takes messages and generation settings and returns a `ChatCompletion`. A new transport only needs to implement this protocol; the rest of the loop stays unchanged.
 
 ### `AttemptRunner`
 
-An attempt runner is any callable from `AttemptContext` to `AttemptResult`. The orchestrator therefore works with model calls, cached trajectories, replay fixtures, or deterministic baselines.
+An attempt runner is a callable from `AttemptContext` to `AttemptResult`. It can wrap a live model call, a cached response, or a test fixture.
 
 ### `SolveOutcome`
 
-An outcome includes the selected answer, ranked candidates, completed attempt records, elapsed time, and a machine-readable stop reason. Downstream evaluation should consume this object instead of scraping console text.
+An outcome holds the selected answer, ranked candidates, completed attempts, elapsed time, and stop reason. The evaluator reads this object directly instead of scraping terminal output.
 
 ## Invariants
 
@@ -42,4 +42,4 @@ Python threads cannot forcibly stop an in-flight HTTP call. The backend request 
 
 ## Extending the system
 
-To add a backend, implement `ChatBackend.complete` and normalize text, tool calls, logprobs, usage, and finish reason. To add a tool, introduce a narrow schema and isolated executor, then generalize the runner's current single-tool dispatch. To experiment with selection, keep raw `AttemptResult` records fixed and replace the selector in an offline replay; this prevents model sampling noise from contaminating the comparison.
+To add a backend, implement `ChatBackend.complete` and normalize text, tool calls, logprobs, usage, and finish reason. A second tool needs its own narrow schema and executor plus a dispatch branch in the runner. For voting experiments, replay the same `AttemptResult` records through another selector so model sampling does not change between runs.

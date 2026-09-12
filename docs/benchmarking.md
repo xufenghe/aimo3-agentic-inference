@@ -1,6 +1,6 @@
 # Benchmarking
 
-The evaluator is intentionally small. A credible comparison depends more on controlling the experiment than on producing a large dashboard.
+The evaluator writes plain JSONL on purpose. That makes it easy to inspect a run and hard to hide a changed setting behind a dashboard.
 
 ## Dataset format
 
@@ -23,21 +23,21 @@ For every compared configuration, hold constant:
 - total timeout, max tokens, and tool policy;
 - seed base and number of attempts.
 
-Change one system factor at a time. Useful ablations include tool on/off, one versus multiple reasoning families, fixed attempts versus early stopping, and vote-only versus entropy-aware tie-breaking.
+Change one setting at a time. Good first comparisons are tool on/off, one versus four reasoning families, fixed attempts versus early stopping, and vote-only versus entropy tie-breaking.
 
 ## Metrics
 
-Report at least exact-match accuracy, coverage, median elapsed time, attempts completed, generated tokens, Python-call count, Python-error rate, and stop-reason distribution. Accuracy alone can hide a configuration that times out or spends far more compute.
+Track exact-match accuracy, coverage, median time, attempts completed, generated tokens, Python calls, Python errors, and stop reasons. Accuracy by itself can hide a configuration that times out or uses much more compute.
 
-The built-in JSONL writer records aggregate outcomes but deliberately omits prompts and chain-of-thought. If you add token or tool metrics to public results, aggregate them rather than publishing private problem content.
+The built-in writer keeps aggregate outcomes and leaves out prompts and chain-of-thought. Public result files should do the same when the problems are private or licensed.
 
 ## Evidence labels
 
-Use precise language in reports:
+These labels keep results unambiguous:
 
 - **unit-tested** means local control logic passed its deterministic tests;
 - **endpoint smoke-tested** means one real server request completed;
 - **evaluated** means a named dataset and fixed configuration produced results;
 - **competition result** requires an official submission record.
 
-Do not convert one evidence level into another.
+A passing unit test is not a model evaluation, and a local evaluation is not a competition result.

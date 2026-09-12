@@ -19,15 +19,15 @@ python -m pip install -e ".[dev]"
 make check
 ```
 
-## Confirm the control plane
+## Run the demo
 
 ```bash
 aimo3 demo
 ```
 
-This runs eight deterministic mock attempts, reaches four matching votes for `42`, and returns early. It validates the parser, concurrent orchestrator, and consensus path without validating a model server.
+This runs eight fake attempts and stops when four of them vote for `42`. No model server is involved.
 
-## Confirm a model endpoint
+## Check your model endpoint
 
 ```bash
 export AIMO_API_KEY=local-token
@@ -36,7 +36,7 @@ aimo3 doctor \
   --model openai/gpt-oss-20b
 ```
 
-`doctor` calls the endpoint's models route. It proves connectivity and authentication, not tool-call compatibility or mathematical quality.
+`doctor` calls the models route. If it works, routing and authentication are okay. The first `solve` call is still the real test of chat and tool-call compatibility.
 
 ## Solve one problem
 
@@ -62,7 +62,7 @@ aimo3 evaluate examples/problems.jsonl \
   --output outputs/baseline.jsonl
 ```
 
-The command prints one compact result per problem and an aggregate exact-match score when gold answers exist. The output file never includes the problem statement or model reasoning. A pre-existing output file is protected unless `--overwrite` is explicitly passed.
+The command prints one line per problem and an exact-match score when gold answers are present. The result file leaves out the problem text and model reasoning. It also refuses to overwrite an existing file unless you pass `--overwrite`.
 
 ## Common failures
 

@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: "If this inference toolkit is useful in your work, cite the repository and release."
+type: software
+title: "AIMO3 Agentic Inference"
+abstract: "An AIMO3-style mathematical reasoning agent with parallel attempts, Python verification, early stopping, and entropy-aware consensus."
+authors:
+  - family-names: He
+    given-names: Xufeng
+repository-code: "https://github.com/xufenghe/aimo3-agentic-inference"
+url: "https://xufenghe.github.io/aimo3-agentic-inference/"
+license: MIT
+version: 0.2.0
+date-released: 2026-09-11
+keywords:
+  - AIMO3
+  - mathematical reasoning
+  - olympiad mathematics
+  - agentic inference
+  - vLLM
+  - tool calling
+  - self-consistency

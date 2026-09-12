@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AIMO3 Agentic Inference | Math Reasoning Agent for vLLM</title>
+  <meta name="description" content="Open-source AIMO3 math reasoning agent for vLLM and OpenAI-compatible models, with Python verification, early stopping, and entropy-aware voting.">
+  <meta name="author" content="Xufeng He">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://xufenghe.github.io/aimo3-agentic-inference/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="AIMO3 Agentic Inference">
+  <meta property="og:title" content="AIMO3 Agentic Inference">
+  <meta property="og:description" content="Parallel math reasoning, Python verification, and consensus voting for vLLM and OpenAI-compatible models.">
+  <meta property="og:url" content="https://xufenghe.github.io/aimo3-agentic-inference/">
+  <meta property="og:image" content="https://opengraph.githubassets.com/1/xufenghe/aimo3-agentic-inference">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="AIMO3 Agentic Inference">
+  <meta name="twitter:description" content="An open-source math reasoning agent for vLLM and OpenAI-compatible models.">
+  <meta name="twitter:image" content="https://opengraph.githubassets.com/1/xufenghe/aimo3-agentic-inference">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareSourceCode",
+    "name": "AIMO3 Agentic Inference",
+    "description": "AIMO3-style mathematical reasoning agent with parallel attempts, Python tool use, early stopping, and entropy-aware consensus.",
+    "codeRepository": "https://github.com/xufenghe/aimo3-agentic-inference",
+    "url": "https://xufenghe.github.io/aimo3-agentic-inference/",
+    "license": "https://opensource.org/license/mit",
+    "programmingLanguage": "Python",
+    "runtimePlatform": "Python 3.11 or newer",
+    "keywords": "AIMO3, mathematical reasoning, olympiad math, vLLM, gpt-oss, tool calling, self-consistency",
+    "author": {"@type": "Person", "name": "Xufeng He"}
+  }
+  </script>
+  <style>
+    :root { color-scheme: dark; --bg: #07111f; --panel: #0d1d31; --line: #29435f; --text: #eff6ff; --muted: #adc2d8; --blue: #60a5fa; --green: #34d399; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.65 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    a { color: #93c5fd; }
+    nav, main, footer { width: min(1060px, calc(100% - 40px)); margin: auto; }
+    nav { display: flex; align-items: center; justify-content: space-between; padding: 24px 0; }
+    nav strong { letter-spacing: -.02em; }
+    nav div { display: flex; gap: 20px; }
+    nav a { color: var(--muted); text-decoration: none; font-size: 15px; }
+    .hero { padding: 88px 0 72px; max-width: 900px; }
+    .eyebrow { color: var(--green); font: 600 14px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; text-transform: uppercase; }
+    h1 { margin: 14px 0 24px; font-size: clamp(48px, 8vw, 86px); line-height: 1.02; letter-spacing: -.055em; }
+    h2 { margin: 0 0 18px; font-size: clamp(28px, 4vw, 42px); line-height: 1.15; letter-spacing: -.035em; }
+    h3 { margin: 0 0 8px; font-size: 19px; }
+    .lead { max-width: 770px; color: #c8daec; font-size: clamp(20px, 2.6vw, 26px); }
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
+    .button { display: inline-block; padding: 11px 18px; border: 1px solid var(--line); border-radius: 9px; color: var(--text); text-decoration: none; font-weight: 650; }
+    .button.primary { border-color: var(--green); background: var(--green); color: #05231d; }
+    section.block { padding: 68px 0; border-top: 1px solid var(--line); }
+    .copy { max-width: 760px; color: var(--muted); }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 30px; }
+    .card { padding: 22px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+    .card p { margin: 0; color: var(--muted); font-size: 15px; }
+    pre { overflow-x: auto; margin: 28px 0 0; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: #040b14; color: #d1fae5; font-size: 14px; }
+    .flow { margin-top: 28px; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .flow b { color: var(--text); }
+    .faq { display: grid; grid-template-columns: 1fr 1fr; gap: 24px 42px; margin-top: 28px; }
+    .faq p { margin: 0; color: var(--muted); }
+    footer { padding: 36px 0 54px; border-top: 1px solid var(--line); color: #7892ad; font-size: 14px; }
+    @media (max-width: 760px) { nav div { display: none; } .hero { padding-top: 58px; } .grid, .faq { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <nav>
+    <strong>AIMO3 Agentic Inference</strong>
+    <div><a href="https://github.com/xufenghe/aimo3-agentic-inference">Code</a><a href="https://github.com/xufenghe/aimo3-agentic-inference/tree/main/docs">Docs</a><a href="https://github.com/xufenghe/aimo3-agentic-inference/releases">Releases</a></div>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <div class="eyebrow">Open-source Python package</div>
+      <h1>Several ways to solve it. One answer to return.</h1>
+      <p class="lead">An AIMO3-style math reasoning agent for vLLM and OpenAI-compatible models. It runs parallel solutions, checks calculations in Python, and stops when the answers agree.</p>
+      <div class="actions">
+        <a class="button primary" href="https://github.com/xufenghe/aimo3-agentic-inference">View on GitHub</a>
+        <a class="button" href="https://github.com/xufenghe/aimo3-agentic-inference/releases/tag/v0.2.0">Download v0.2.0</a>
+      </div>
+    </header>
+
+    <section class="block">
+      <h2>The useful work happens around the model.</h2>
+      <p class="copy">A model can write a promising solution and still miss the integer, repeat the same mistake eight times, or spend the full budget on one stuck request. I pulled that surrounding logic into a package that can be tested without loading a model.</p>
+      <div class="grid">
+        <article class="card"><h3>Parallel attempts</h3><p>Four reasoning styles, deterministic seeds, bounded workers, and one shared deadline.</p></article>
+        <article class="card"><h3>Python checks</h3><p>Structured tool calls run in a separate local process with time and output limits.</p></article>
+        <article class="card"><h3>Stable consensus</h3><p>Boxed integers are counted first. Token entropy only settles equal-vote cases.</p></article>
+      </div>
+    </section>
+
+    <section class="block">
+      <h2>Run the control loop in a minute.</h2>
+      <p class="copy">The demo uses fake attempts, so it works on a laptop and does not download model weights.</p>
+      <pre><code>git clone https://github.com/xufenghe/aimo3-agentic-inference.git
+cd aimo3-agentic-inference
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -e .
+aimo3 demo</code></pre>
+      <p class="flow"><b>problem</b> → diverse attempts → Python checks → boxed answers → vote → <b>result</b></p>
+    </section>
+
+    <section class="block">
+      <h2>Made for local model servers.</h2>
+      <p class="copy">The included client uses Chat Completions and works with vLLM-style endpoints. The documented example uses gpt-oss-20b, but the model name is configurable.</p>
+      <div class="actions">
+        <a class="button" href="https://github.com/xufenghe/aimo3-agentic-inference/blob/main/docs/quickstart.md">Quickstart</a>
+        <a class="button" href="https://github.com/xufenghe/aimo3-agentic-inference/blob/main/docs/vllm.md">vLLM setup</a>
+        <a class="button" href="https://github.com/xufenghe/aimo3-agentic-inference/blob/main/docs/architecture.md">Architecture</a>
+        <a class="button" href="https://github.com/xufenghe/aimo3-agentic-inference/blob/main/docs/benchmarking.md">Benchmarking</a>
+      </div>
+    </section>
+
+    <section class="block">
+      <h2>Questions that come up</h2>
+      <div class="faq">
+        <div><h3>Is this an official AIMO project?</h3><p>No. It is an independent clean-room implementation inspired by the AI Mathematical Olympiad ecosystem.</p></div>
+        <div><h3>Does it need a GPU?</h3><p>The package, tests, and demo do not. Real inference needs a local or remote model endpoint.</p></div>
+        <div><h3>Is Python execution sandboxed?</h3><p>Not against hostile code. The local runner is for trusted experiments; untrusted code belongs in a container or microVM.</p></div>
+        <div><h3>Does it include a benchmark result?</h3><p>Not yet. The evaluator is included so results can be published with the exact model and settings later.</p></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>MIT licensed. No model weights, Kaggle data, private problems, or submission credentials are included.</footer>
+</body>
+</html>

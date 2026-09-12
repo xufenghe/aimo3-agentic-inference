@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://xufenghe.github.io/aimo3-agentic-inference/sitemap.xml

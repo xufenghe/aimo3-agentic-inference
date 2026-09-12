@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
   <title id="title">AIMO3 Agentic Inference</title>
-  <desc id="desc">Parallel mathematical reasoning paths feed Python verification and calibrated consensus.</desc>
+  <desc id="desc">An AIMO3 math agent runs parallel solutions, checks calculations in Python, and votes on the final answer.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#07111f"/><stop offset="0.55" stop-color="#10294a"/><stop offset="1" stop-color="#0d4b4b"/></linearGradient>
     <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#60a5fa"/><stop offset="1" stop-color="#34d399"/></linearGradient>
@@ -16,5 +16,5 @@
   <text x="300" y="142" fill="#f8fafc" font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif" font-size="56" font-weight="750" letter-spacing="-1">AIMO3 Agentic Inference</text>
   <text x="304" y="194" fill="#bfdbfe" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="21">parallel reasoning · Python verification · calibrated consensus</text>
   <rect x="304" y="229" width="580" height="3" rx="1.5" fill="url(#accent)"/>
-  <text x="304" y="276" fill="#a7f3d0" font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif" font-size="19">Inspectable. Deadline-aware. Backend-neutral.</text>
+  <text x="304" y="276" fill="#a7f3d0" font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif" font-size="19">one model endpoint → several attempts → one integer answer</text>
 </svg>
