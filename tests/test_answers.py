@@ -10,6 +10,11 @@ class ExtractBoxedIntegerTests(unittest.TestCase):
     def test_accepts_thousands_separator(self) -> None:
         self.assertEqual(extract_boxed_integer(r"\\boxed{12,345}"), 12_345)
 
+    def test_rejects_malformed_thousands_separator(self) -> None:
+        for value in ("1,23", "12,34,567", ",42", "42,", "1,,000"):
+            with self.subTest(value=value):
+                self.assertIsNone(extract_boxed_integer(rf"\\boxed{{{value}}}"))
+
     def test_rejects_expression_and_out_of_range(self) -> None:
         self.assertIsNone(extract_boxed_integer(r"\\boxed{6 * 7}"))
         self.assertIsNone(extract_boxed_integer(r"\\boxed{100000}"))
