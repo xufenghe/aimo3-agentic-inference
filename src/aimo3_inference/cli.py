@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import sys
+import tempfile
 import time
 from collections.abc import Sequence
 
@@ -126,28 +127,39 @@ def _solve_record(record: ProblemRecord, args: argparse.Namespace) -> SolveOutco
 
 def _evaluate(args: argparse.Namespace) -> int:
     output_path = os.path.abspath(args.output)
-    if os.path.exists(output_path):
-        if not args.overwrite:
-            raise ValueError(
-                f"output already exists: {args.output}; pass --overwrite to replace it"
-            )
-        os.unlink(output_path)
-    writer = JsonlRunWriter(args.output)
-    rows: list[tuple[int | None, int | None]] = []
-    for record in read_jsonl(args.dataset):
-        outcome = _solve_record(record, args)
-        writer.write(record, outcome)
-        rows.append((outcome.answer, record.answer))
-        print(
-            json.dumps(
-                {
-                    "id": record.id,
-                    "prediction": outcome.answer,
-                    "expected": record.answer,
-                    "stop_reason": outcome.stop_reason,
-                }
-            )
+    if os.path.exists(output_path) and not args.overwrite:
+        raise ValueError(
+            f"output already exists: {args.output}; pass --overwrite to replace it"
         )
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    fd, temporary_path = tempfile.mkstemp(
+        prefix=f".{os.path.basename(output_path)}.", suffix=".tmp", dir=os.path.dirname(output_path)
+    )
+    os.close(fd)
+    try:
+        writer = JsonlRunWriter(temporary_path)
+        rows: list[tuple[int | None, int | None]] = []
+        for record in read_jsonl(args.dataset):
+            outcome = _solve_record(record, args)
+            writer.write(record, outcome)
+            rows.append((outcome.answer, record.answer))
+            print(
+                json.dumps(
+                    {
+                        "id": record.id,
+                        "prediction": outcome.answer,
+                        "expected": record.answer,
+                        "stop_reason": outcome.stop_reason,
+                    }
+                )
+            )
+        if args.overwrite:
+            os.replace(temporary_path, output_path)
+        else:
+            os.link(temporary_path, output_path)
+    finally:
+        if os.path.exists(temporary_path):
+            os.unlink(temporary_path)
     value = accuracy(rows)
     print(json.dumps({"records": len(rows), "accuracy": value, "output": args.output}))
     return 0

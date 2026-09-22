@@ -94,7 +94,7 @@ aimo3 evaluate examples/problems.jsonl \
   --output outputs/results.jsonl
 ```
 
-The command will not replace an existing result file unless you pass `--overwrite`. See [benchmarking](docs/benchmarking.md) before comparing two configurations.
+The command will not replace an existing result file unless you pass `--overwrite`. Results are published only after the full evaluation succeeds; a failed run leaves an existing result file intact. See [benchmarking](docs/benchmarking.md) before comparing two configurations.
 
 ## The inference loop
 
