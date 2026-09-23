@@ -15,6 +15,7 @@ from .models import (
     ToolExecution,
 )
 from .orchestrator import InferenceOrchestrator
+from .replay import ReplayRecord, read_replay_jsonl, summarize_replay
 from .runner import ToolAugmentedMathRunner
 
 __all__ = [
@@ -27,10 +28,13 @@ __all__ = [
     "InverseEntropyConsensus",
     "MathRunnerConfig",
     "ProblemRecord",
+    "ReplayRecord",
     "SolveOutcome",
     "SolverConfig",
     "ToolCall",
     "ToolExecution",
     "ToolAugmentedMathRunner",
     "extract_boxed_integer",
+    "read_replay_jsonl",
+    "summarize_replay",
 ]

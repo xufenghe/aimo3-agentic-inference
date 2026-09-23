@@ -1,0 +1,3 @@
+{"id":"synthetic-tie","expected":42,"attempts":[{"answer":7,"mean_entropy":0.8},{"answer":42,"mean_entropy":0.2}]}
+{"id":"synthetic-agreement","expected":9,"attempts":[{"answer":9,"mean_entropy":null},{"answer":9,"mean_entropy":0.4},{"answer":3,"mean_entropy":0.1}]}
+{"id":"synthetic-no-answer","attempts":[{"answer":null,"mean_entropy":null}]}

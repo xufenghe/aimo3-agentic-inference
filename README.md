@@ -15,7 +15,8 @@
   <a href="https://xufenghe.github.io/aimo3-agentic-inference/">Project site</a> ·
   <a href="docs/quickstart.md">Quickstart</a> ·
   <a href="docs/architecture.md">Architecture</a> ·
-  <a href="docs/benchmarking.md">Benchmarking</a>
+  <a href="docs/benchmarking.md">Benchmarking</a> ·
+  <a href="docs/replay.md">Replay ablations</a>
 </p>
 
 An open-source, AIMO3-style math reasoning agent for vLLM and other OpenAI-compatible model servers. It runs several independent solutions, gives each one a Python tool for checking calculations, and stops when enough attempts agree on the same boxed integer.
@@ -95,6 +96,8 @@ aimo3 evaluate examples/problems.jsonl \
 ```
 
 The command will not replace an existing result file unless you pass `--overwrite`. Results are published only after the full evaluation succeeds; a failed run leaves an existing result file intact. See [benchmarking](docs/benchmarking.md) before comparing two configurations.
+
+To compare vote-only and inverse-entropy selection without another model run, use `aimo3 replay` with saved attempt metadata. The [replay guide](docs/replay.md) documents the privacy-conscious fixture schema.
 
 ## The inference loop
 

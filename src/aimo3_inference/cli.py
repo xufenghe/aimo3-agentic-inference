@@ -15,6 +15,7 @@ from .config import MathRunnerConfig, SolverConfig
 from .dataset import accuracy, read_jsonl
 from .models import AttemptContext, AttemptResult, ProblemRecord, SolveOutcome
 from .orchestrator import InferenceOrchestrator
+from .replay import read_replay_jsonl, summarize_replay
 from .runner import ToolAugmentedMathRunner
 from .telemetry import JsonlRunWriter
 from .tools.python_subprocess import LocalPythonTool
@@ -28,6 +29,9 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     subparsers.add_parser("demo", help="run the orchestration stack without a model")
+
+    replay = subparsers.add_parser("replay", help="compare consensus policies on saved attempts")
+    replay.add_argument("fixtures", help="JSONL with attempt answers and entropy metadata")
 
     doctor = subparsers.add_parser("doctor", help="check an OpenAI-compatible endpoint")
     _add_backend_arguments(doctor)
@@ -76,6 +80,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         if args.command == "demo":
             return _demo()
+        if args.command == "replay":
+            print(json.dumps(summarize_replay(list(read_replay_jsonl(args.fixtures))), indent=2))
+            return 0
         if args.command == "doctor":
             backend = _backend_from_args(args)
             print(json.dumps({"models": backend.list_models()}, indent=2))
