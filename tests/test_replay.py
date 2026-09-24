@@ -50,8 +50,21 @@ class ReplayTests(unittest.TestCase):
         )
 
     def test_rejects_private_problem_text(self) -> None:
-        with self.assertRaisesRegex(ValueError, "private text fields"):
+        with self.assertRaisesRegex(ValueError, "unsupported fields: problem"):
             self._read([{"problem": "private", "attempts": []}])
+
+    def test_rejects_reasoning_inside_attempt(self) -> None:
+        with self.assertRaisesRegex(ValueError, "unsupported fields: reasoning"):
+            self._read(
+                [
+                    {
+                        "id": "unsafe",
+                        "attempts": [
+                            {"answer": 42, "mean_entropy": 0.2, "reasoning": "private"}
+                        ],
+                    }
+                ]
+            )
 
     def _read(self, rows: list[dict[str, object]]):
         with tempfile.TemporaryDirectory() as directory:

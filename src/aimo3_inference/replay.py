@@ -88,10 +88,7 @@ def _parse_replay_record(row: Any, *, source: Path, line_number: int) -> ReplayR
     prefix = f"{source}:{line_number}"
     if not isinstance(row, dict):
         raise ValueError(f"{prefix}: each row must be a JSON object")
-    forbidden = {"problem", "prompt", "reasoning", "chain_of_thought"}.intersection(row)
-    if forbidden:
-        fields = ", ".join(sorted(forbidden))
-        raise ValueError(f"{prefix}: private text fields are not allowed: {fields}")
+    _reject_unknown_fields(row, allowed={"id", "expected", "attempts"}, prefix=prefix)
     expected = row.get("expected")
     if expected is not None and (isinstance(expected, bool) or not isinstance(expected, int)):
         raise ValueError(f"{prefix}: expected must be an integer or null")
@@ -103,6 +100,11 @@ def _parse_replay_record(row: Any, *, source: Path, line_number: int) -> ReplayR
     for attempt_id, raw_attempt in enumerate(raw_attempts):
         if not isinstance(raw_attempt, dict):
             raise ValueError(f"{prefix}: attempt {attempt_id} must be a JSON object")
+        _reject_unknown_fields(
+            raw_attempt,
+            allowed={"answer", "mean_entropy"},
+            prefix=f"{prefix}: attempt {attempt_id}",
+        )
         answer = raw_attempt.get("answer")
         if answer is not None and (isinstance(answer, bool) or not isinstance(answer, int)):
             raise ValueError(f"{prefix}: attempt {attempt_id} answer must be an integer or null")
@@ -127,3 +129,10 @@ def _parse_replay_record(row: Any, *, source: Path, line_number: int) -> ReplayR
         attempts=tuple(attempts),
         expected=expected,
     )
+
+
+def _reject_unknown_fields(row: dict[str, Any], *, allowed: set[str], prefix: str) -> None:
+    unknown = set(row).difference(allowed)
+    if unknown:
+        fields = ", ".join(sorted(str(field) for field in unknown))
+        raise ValueError(f"{prefix}: unsupported fields: {fields}")
