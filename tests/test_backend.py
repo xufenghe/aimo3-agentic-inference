@@ -3,7 +3,7 @@ import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from aimo3_inference.backends import OpenAICompatibleBackend
+from aimo3_inference.backends import BackendError, OpenAICompatibleBackend
 
 
 class _Handler(BaseHTTPRequestHandler):
@@ -104,6 +104,42 @@ class OpenAICompatibleBackendTests(unittest.TestCase):
         self.assertEqual(_Handler.authorization, "Bearer local")
         self.assertFalse(_Handler.request_payload["parallel_tool_calls"])
         self.assertEqual(_Handler.request_payload["reasoning_effort"], "high")
+
+    def test_rejects_malformed_tool_calls_instead_of_silently_dropping_them(self) -> None:
+        base_response = {
+            "choices": [
+                {
+                    "finish_reason": "tool_calls",
+                    "message": {"role": "assistant", "content": ""},
+                }
+            ]
+        }
+        invalid_calls = (
+            ("not-an-object", r"tool_calls\[0\] must be an object"),
+            ({"id": "call-1"}, r"tool_calls\[0\]\.function must be an object"),
+            (
+                {"function": {"name": "execute_python", "arguments": "{}"}},
+                r"tool_calls\[0\]\.id must be a non-empty string",
+            ),
+            (
+                {"id": "call-1", "function": {"arguments": "{}"}},
+                r"tool_calls\[0\]\.function\.name must be a non-empty string",
+            ),
+            (
+                {
+                    "id": "call-1",
+                    "function": {"name": "execute_python", "arguments": {}},
+                },
+                r"tool_calls\[0\]\.function\.arguments must be a string",
+            ),
+        )
+
+        for raw_call, error in invalid_calls:
+            with self.subTest(raw_call=raw_call):
+                response = json.loads(json.dumps(base_response))
+                response["choices"][0]["message"]["tool_calls"] = [raw_call]
+                with self.assertRaisesRegex(BackendError, error):
+                    OpenAICompatibleBackend._parse_completion(response)
 
 
 if __name__ == "__main__":

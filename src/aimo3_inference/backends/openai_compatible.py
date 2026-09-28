@@ -139,17 +139,30 @@ class OpenAICompatibleBackend:
         raw_calls = message.get("tool_calls") or []
         if not isinstance(raw_calls, list):
             raise BackendError("assistant tool_calls must be an array")
-        for raw in raw_calls:
+        for index, raw in enumerate(raw_calls):
             if not isinstance(raw, dict):
-                continue
+                raise BackendError(f"assistant tool_calls[{index}] must be an object")
             function = raw.get("function")
             if not isinstance(function, dict):
-                continue
+                raise BackendError(f"assistant tool_calls[{index}].function must be an object")
+            call_id = raw.get("id")
+            name = function.get("name")
+            arguments = function.get("arguments")
+            if not isinstance(call_id, str) or not call_id:
+                raise BackendError(f"assistant tool_calls[{index}].id must be a non-empty string")
+            if not isinstance(name, str) or not name:
+                raise BackendError(
+                    f"assistant tool_calls[{index}].function.name must be a non-empty string"
+                )
+            if not isinstance(arguments, str):
+                raise BackendError(
+                    f"assistant tool_calls[{index}].function.arguments must be a string"
+                )
             calls.append(
                 ToolCall(
-                    id=str(raw.get("id", "")),
-                    name=str(function.get("name", "")),
-                    arguments=str(function.get("arguments", "{}")),
+                    id=call_id,
+                    name=name,
+                    arguments=arguments,
                 )
             )
 
