@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import urllib.error
 import urllib.request
 from collections.abc import Mapping, Sequence
@@ -13,6 +14,15 @@ from ..models import ChatCompletion, ToolCall
 
 class BackendError(RuntimeError):
     """Raised when a model endpoint fails or returns an invalid response."""
+
+
+def _finite_logprob(value: object, *, path: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise BackendError(f"{path} must be a number")
+    parsed = float(value)
+    if not math.isfinite(parsed):
+        raise BackendError(f"{path} must be finite")
+    return parsed
 
 
 class OpenAICompatibleBackend:
@@ -170,17 +180,26 @@ class OpenAICompatibleBackend:
         logprobs = choice.get("logprobs")
         content_rows = logprobs.get("content") if isinstance(logprobs, dict) else None
         if isinstance(content_rows, list):
-            for row in content_rows:
+            for row_index, row in enumerate(content_rows):
                 if not isinstance(row, dict):
                     continue
                 top = row.get("top_logprobs")
                 values: dict[str, float] = {}
                 if isinstance(top, list):
-                    for item in top:
+                    for item_index, item in enumerate(top):
                         if isinstance(item, dict) and "token" in item and "logprob" in item:
-                            values[str(item["token"])] = float(item["logprob"])
+                            values[str(item["token"])] = _finite_logprob(
+                                item["logprob"],
+                                path=(
+                                    "choice.logprobs.content"
+                                    f"[{row_index}].top_logprobs[{item_index}].logprob"
+                                ),
+                            )
                 if not values and "token" in row and "logprob" in row:
-                    values[str(row["token"])] = float(row["logprob"])
+                    values[str(row["token"])] = _finite_logprob(
+                        row["logprob"],
+                        path=f"choice.logprobs.content[{row_index}].logprob",
+                    )
                 if values:
                     logprob_rows.append(values)
 

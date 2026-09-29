@@ -1,4 +1,5 @@
 import json
+import math
 import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -140,6 +141,36 @@ class OpenAICompatibleBackendTests(unittest.TestCase):
                 response["choices"][0]["message"]["tool_calls"] = [raw_call]
                 with self.assertRaisesRegex(BackendError, error):
                     OpenAICompatibleBackend._parse_completion(response)
+
+    def test_rejects_non_numeric_and_non_finite_logprobs(self) -> None:
+        invalid_values = (
+            (None, "must be a number"),
+            (True, "must be a number"),
+            ("-0.2", "must be a number"),
+            (math.nan, "must be finite"),
+            (math.inf, "must be finite"),
+        )
+
+        for value, error in invalid_values:
+            for location in ("row", "top_logprobs"):
+                with self.subTest(value=value, location=location):
+                    row = {"token": "x", "logprob": value, "top_logprobs": []}
+                    if location == "top_logprobs":
+                        row = {
+                            "token": "x",
+                            "logprob": -0.2,
+                            "top_logprobs": [{"token": "x", "logprob": value}],
+                        }
+                    response = {
+                        "choices": [
+                            {
+                                "message": {"role": "assistant", "content": "answer"},
+                                "logprobs": {"content": [row]},
+                            }
+                        ]
+                    }
+                    with self.assertRaisesRegex(BackendError, error):
+                        OpenAICompatibleBackend._parse_completion(response)
 
 
 if __name__ == "__main__":
