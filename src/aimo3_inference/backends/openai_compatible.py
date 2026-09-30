@@ -144,6 +144,9 @@ class OpenAICompatibleBackend:
         message = choice.get("message")
         if not isinstance(message, dict):
             raise BackendError("backend response contained no assistant message")
+        content = message.get("content")
+        if content is not None and not isinstance(content, str):
+            raise BackendError("assistant message content must be a string or null")
 
         calls: list[ToolCall] = []
         raw_calls = message.get("tool_calls") or []
@@ -210,7 +213,7 @@ class OpenAICompatibleBackend:
             if isinstance(usage, dict) and isinstance(value, int)
         } if isinstance(usage, dict) else {}
         return ChatCompletion(
-            text=str(message.get("content") or ""),
+            text=content or "",
             tool_calls=tuple(calls),
             token_logprobs=tuple(logprob_rows),
             finish_reason=str(choice.get("finish_reason")) if choice.get("finish_reason") else None,

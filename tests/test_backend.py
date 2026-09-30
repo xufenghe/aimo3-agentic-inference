@@ -172,6 +172,47 @@ class OpenAICompatibleBackendTests(unittest.TestCase):
                     with self.assertRaisesRegex(BackendError, error):
                         OpenAICompatibleBackend._parse_completion(response)
 
+    def test_rejects_non_text_message_content(self) -> None:
+        for content in (42, True, ["answer"], {"text": "answer"}):
+            with self.subTest(content=content):
+                response = {
+                    "choices": [
+                        {
+                            "message": {"role": "assistant", "content": content},
+                        }
+                    ]
+                }
+                with self.assertRaisesRegex(
+                    BackendError, "assistant message content must be a string or null"
+                ):
+                    OpenAICompatibleBackend._parse_completion(response)
+
+    def test_accepts_null_message_content_for_tool_calls(self) -> None:
+        response = {
+            "choices": [
+                {
+                    "message": {
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [
+                            {
+                                "id": "call-1",
+                                "function": {
+                                    "name": "execute_python",
+                                    "arguments": "{}",
+                                },
+                            }
+                        ],
+                    }
+                }
+            ]
+        }
+
+        completion = OpenAICompatibleBackend._parse_completion(response)
+
+        self.assertEqual(completion.text, "")
+        self.assertEqual(completion.tool_calls[0].name, "execute_python")
+
 
 if __name__ == "__main__":
     unittest.main()
