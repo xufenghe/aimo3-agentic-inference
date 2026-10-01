@@ -59,7 +59,7 @@ class ToolAugmentedMathRunner:
         finish_reason = "tool_round_limit"
 
         try:
-            for _ in range(self.config.max_tool_rounds + 1):
+            for round_index in range(self.config.max_tool_rounds + 1):
                 remaining = context.deadline - time.monotonic()
                 if context.stop_event.is_set():
                     finish_reason = "cancelled"
@@ -90,9 +90,22 @@ class ToolAugmentedMathRunner:
                 if self.python_tool is None:
                     finish_reason = "tool_unavailable"
                     break
+                if round_index >= self.config.max_tool_rounds:
+                    finish_reason = "tool_round_limit"
+                    break
 
                 messages.append(self._assistant_message(completion))
+                stop_tool_loop = False
                 for call in completion.tool_calls:
+                    remaining = context.deadline - time.monotonic()
+                    if context.stop_event.is_set():
+                        finish_reason = "cancelled"
+                        stop_tool_loop = True
+                        break
+                    if remaining <= 0:
+                        finish_reason = "deadline"
+                        stop_tool_loop = True
+                        break
                     python_calls += 1
                     output, ok = self._execute_tool_call(call, remaining=remaining)
                     python_errors += int(not ok)
@@ -104,6 +117,8 @@ class ToolAugmentedMathRunner:
                             "content": output,
                         }
                     )
+                if stop_tool_loop:
+                    break
 
             answer = extract_boxed_integer(last_text)
             return AttemptResult(
