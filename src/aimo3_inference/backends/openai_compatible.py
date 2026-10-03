@@ -16,12 +16,32 @@ class BackendError(RuntimeError):
     """Raised when a model endpoint fails or returns an invalid response."""
 
 
+_USAGE_TOKEN_FIELDS = ("prompt_tokens", "completion_tokens", "total_tokens")
+
+
 def _finite_logprob(value: object, *, path: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise BackendError(f"{path} must be a number")
     parsed = float(value)
     if not math.isfinite(parsed):
         raise BackendError(f"{path} must be finite")
+    return parsed
+
+
+def _parse_usage(value: object) -> dict[str, int]:
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        raise BackendError("backend usage must be an object or null")
+
+    parsed: dict[str, int] = {}
+    for field in _USAGE_TOKEN_FIELDS:
+        if field not in value:
+            continue
+        count = value[field]
+        if isinstance(count, bool) or not isinstance(count, int) or count < 0:
+            raise BackendError(f"usage.{field} must be a non-negative integer")
+        parsed[field] = count
     return parsed
 
 
@@ -206,17 +226,11 @@ class OpenAICompatibleBackend:
                 if values:
                     logprob_rows.append(values)
 
-        usage = data.get("usage")
-        clean_usage = {
-            str(key): int(value)
-            for key, value in usage.items()
-            if isinstance(usage, dict) and isinstance(value, int)
-        } if isinstance(usage, dict) else {}
         return ChatCompletion(
             text=content or "",
             tool_calls=tuple(calls),
             token_logprobs=tuple(logprob_rows),
             finish_reason=str(choice.get("finish_reason")) if choice.get("finish_reason") else None,
-            usage=clean_usage,
+            usage=_parse_usage(data.get("usage")),
             raw_message=dict(message),
         )

@@ -187,6 +187,41 @@ class OpenAICompatibleBackendTests(unittest.TestCase):
                 ):
                     OpenAICompatibleBackend._parse_completion(response)
 
+    def test_rejects_malformed_usage_counters(self) -> None:
+        invalid_usage = (
+            ([], "backend usage must be an object or null"),
+            ({"completion_tokens": True}, "usage.completion_tokens"),
+            ({"completion_tokens": -1}, "usage.completion_tokens"),
+            ({"completion_tokens": 1.5}, "usage.completion_tokens"),
+        )
+
+        for usage, error in invalid_usage:
+            with self.subTest(usage=usage):
+                response = {
+                    "choices": [{"message": {"role": "assistant", "content": "answer"}}],
+                    "usage": usage,
+                }
+                with self.assertRaisesRegex(BackendError, error):
+                    OpenAICompatibleBackend._parse_completion(response)
+
+    def test_ignores_nested_usage_details(self) -> None:
+        response = {
+            "choices": [{"message": {"role": "assistant", "content": "answer"}}],
+            "usage": {
+                "prompt_tokens": 10,
+                "completion_tokens": 3,
+                "total_tokens": 13,
+                "completion_tokens_details": {"reasoning_tokens": 2},
+            },
+        }
+
+        completion = OpenAICompatibleBackend._parse_completion(response)
+
+        self.assertEqual(
+            completion.usage,
+            {"prompt_tokens": 10, "completion_tokens": 3, "total_tokens": 13},
+        )
+
     def test_accepts_null_message_content_for_tool_calls(self) -> None:
         response = {
             "choices": [
