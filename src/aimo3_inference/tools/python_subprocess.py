@@ -10,8 +10,39 @@ import sys
 import tempfile
 import time
 from dataclasses import dataclass
+from threading import Thread
+from typing import BinaryIO
 
 from ..models import ToolExecution
+
+
+class _BoundedOutputCollector:
+    """Drain a subprocess pipe while retaining at most ``limit`` bytes."""
+
+    def __init__(self, limit: int) -> None:
+        self.limit = limit
+        self.data = bytearray()
+        self.truncated = False
+        self.error: OSError | None = None
+
+    def drain(self, stream: BinaryIO) -> None:
+        try:
+            while chunk := stream.read(8_192):
+                remaining = self.limit - len(self.data)
+                if remaining > 0:
+                    self.data.extend(chunk[:remaining])
+                if len(chunk) > remaining:
+                    self.truncated = True
+        except OSError as exc:
+            self.error = exc
+        finally:
+            stream.close()
+
+    def render(self) -> str:
+        text = bytes(self.data).decode("utf-8", errors="replace")
+        if self.truncated:
+            text += "\n[output truncated]"
+        return text.rstrip()
 
 
 @dataclass(frozen=True, slots=True)
@@ -158,40 +189,50 @@ class LocalPythonTool:
                 start_new_session=True,
                 preexec_fn=self._resource_limits if os.name == "posix" else None,
             )
+            if process.stdout is None:
+                raise RuntimeError("failed to capture Python tool output")
+            collector = _BoundedOutputCollector(self.max_output_bytes)
+            reader = Thread(
+                target=collector.drain,
+                args=(process.stdout,),
+                name="aimo3-python-output",
+                daemon=True,
+            )
+            reader.start()
             try:
-                raw, _ = process.communicate(timeout=effective_timeout)
+                process.wait(timeout=effective_timeout)
             except subprocess.TimeoutExpired:
                 self._terminate_process_group(process)
-                raw, _ = process.communicate()
-                output, truncated = self._truncate(raw)
+                process.wait()
+                reader.join()
                 return ToolExecution(
-                    output=output,
+                    output=collector.render(),
                     ok=False,
                     elapsed_seconds=time.monotonic() - started,
-                    truncated=truncated,
+                    truncated=collector.truncated,
                     error=f"execution exceeded {effective_timeout:.2f}s",
                 )
+            reader.join()
 
-        output, truncated = self._truncate(raw)
+        if collector.error is not None:
+            return ToolExecution(
+                output=collector.render(),
+                ok=False,
+                elapsed_seconds=time.monotonic() - started,
+                truncated=collector.truncated,
+                error=f"failed to capture output: {collector.error}",
+            )
         return ToolExecution(
-            output=output,
+            output=collector.render(),
             ok=process.returncode == 0,
             elapsed_seconds=time.monotonic() - started,
-            truncated=truncated,
+            truncated=collector.truncated,
             error=(
                 None
                 if process.returncode == 0
                 else f"python exited with code {process.returncode}"
             ),
         )
-
-    def _truncate(self, raw: bytes) -> tuple[str, bool]:
-        truncated = len(raw) > self.max_output_bytes
-        clipped = raw[: self.max_output_bytes]
-        text = clipped.decode("utf-8", errors="replace")
-        if truncated:
-            text += "\n[output truncated]"
-        return text.rstrip(), truncated
 
     def _resource_limits(self) -> None:
         try:

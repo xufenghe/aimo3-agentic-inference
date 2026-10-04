@@ -1,6 +1,19 @@
 import unittest
+from io import BytesIO
 
 from aimo3_inference.tools import LocalPythonTool, PythonPolicy
+from aimo3_inference.tools.python_subprocess import _BoundedOutputCollector
+
+
+class BoundedOutputCollectorTests(unittest.TestCase):
+    def test_discards_bytes_beyond_retention_limit(self) -> None:
+        collector = _BoundedOutputCollector(256)
+
+        collector.drain(BytesIO(b"x" * 1_000_000))
+
+        self.assertEqual(len(collector.data), 256)
+        self.assertTrue(collector.truncated)
+        self.assertTrue(collector.render().endswith("[output truncated]"))
 
 
 class PythonPolicyTests(unittest.TestCase):
