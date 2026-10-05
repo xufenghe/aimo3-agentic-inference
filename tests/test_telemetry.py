@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from aimo3_inference.models import CandidateScore, ProblemRecord, SolveOutcome
+from aimo3_inference.models import AttemptResult, CandidateScore, ProblemRecord, SolveOutcome
 from aimo3_inference.telemetry import JsonlRunWriter
 
 
@@ -19,10 +19,28 @@ class JsonlRunWriterTests(unittest.TestCase):
                     attempts_completed=4,
                     stopped_early=True,
                     candidates=(CandidateScore(42, 4, 12.0, 0.3),),
+                    attempts=(
+                        AttemptResult(
+                            attempt_id=0,
+                            answer=42,
+                            python_calls=2,
+                            python_errors=1,
+                            generated_tokens=120,
+                        ),
+                        AttemptResult(
+                            attempt_id=1,
+                            answer=42,
+                            python_calls=1,
+                            generated_tokens=80,
+                        ),
+                    ),
                 ),
             )
             row = json.loads(path.read_text(encoding="utf-8"))
         self.assertEqual(row["prediction"], 42)
+        self.assertEqual(row["generated_tokens"], 200)
+        self.assertEqual(row["python_calls"], 3)
+        self.assertEqual(row["python_errors"], 1)
         self.assertNotIn("problem", row)
         self.assertNotIn("do not log me", json.dumps(row))
 
