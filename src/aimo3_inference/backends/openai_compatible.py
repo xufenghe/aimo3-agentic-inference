@@ -54,13 +54,21 @@ class OpenAICompatibleBackend:
         *,
         api_key: str | None = None,
         user_agent: str = "aimo3-agentic-inference/0.2",
+        max_response_bytes: int = 16 * 1024 * 1024,
     ) -> None:
         clean = base_url.rstrip("/")
         if not clean.startswith(("http://", "https://")):
             raise ValueError("base_url must start with http:// or https://")
+        if (
+            isinstance(max_response_bytes, bool)
+            or not isinstance(max_response_bytes, int)
+            or max_response_bytes < 1
+        ):
+            raise ValueError("max_response_bytes must be a positive integer")
         self.base_url = clean
         self.api_key = api_key
         self.user_agent = user_agent
+        self.max_response_bytes = max_response_bytes
 
     @property
     def chat_completions_url(self) -> str:
@@ -143,12 +151,19 @@ class OpenAICompatibleBackend:
         request = urllib.request.Request(url, data=body, headers=headers, method=method)
         try:
             with urllib.request.urlopen(request, timeout=timeout) as response:
-                parsed = json.loads(response.read().decode("utf-8"))
+                raw = response.read(self.max_response_bytes + 1)
+                if len(raw) > self.max_response_bytes:
+                    raise BackendError(
+                        f"backend response exceeded {self.max_response_bytes} bytes"
+                    )
+                parsed = json.loads(raw.decode("utf-8"))
         except urllib.error.HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace")[:1_000]
+            detail = exc.read(1_000).decode("utf-8", errors="replace")
             raise BackendError(f"backend HTTP {exc.code}: {detail}") from exc
         except (urllib.error.URLError, TimeoutError) as exc:
             raise BackendError(f"backend request failed: {exc}") from exc
+        except UnicodeDecodeError as exc:
+            raise BackendError("backend returned non-UTF-8 content") from exc
         except json.JSONDecodeError as exc:
             raise BackendError("backend returned invalid JSON") from exc
         if not isinstance(parsed, dict):

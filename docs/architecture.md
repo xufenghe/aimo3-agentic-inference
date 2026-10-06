@@ -18,6 +18,8 @@ There are two layers. The runner talks to the model and handles tool calls. The 
 
 A backend takes messages and generation settings and returns a `ChatCompletion`. A new transport only needs to implement this protocol; the rest of the loop stays unchanged.
 
+`OpenAICompatibleBackend` reads at most 16 MiB from a successful response before rejecting it. Set `max_response_bytes` explicitly when a trusted endpoint needs a different bound, such as a run that returns dense token logprobs.
+
 ### `AttemptRunner`
 
 An attempt runner is a callable from `AttemptContext` to `AttemptResult`. It can wrap a live model call, a cached response, or a test fixture.

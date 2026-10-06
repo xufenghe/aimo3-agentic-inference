@@ -3,6 +3,8 @@ import math
 import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from io import BytesIO
+from unittest.mock import patch
 
 from aimo3_inference.backends import BackendError, OpenAICompatibleBackend
 
@@ -85,6 +87,23 @@ class OpenAICompatibleBackendTests(unittest.TestCase):
 
     def test_lists_models(self) -> None:
         self.assertEqual(self.backend.list_models(), ("openai/gpt-oss-20b",))
+
+    def test_rejects_oversized_responses_before_parsing(self) -> None:
+        backend = OpenAICompatibleBackend("http://example.test/v1", max_response_bytes=4)
+        with patch("urllib.request.urlopen", return_value=BytesIO(b'{"data":[]}')):
+            with self.assertRaisesRegex(BackendError, "response exceeded 4 bytes"):
+                backend.list_models()
+
+    def test_rejects_non_utf8_responses(self) -> None:
+        with patch("urllib.request.urlopen", return_value=BytesIO(b"\xff")):
+            with self.assertRaisesRegex(BackendError, "non-UTF-8"):
+                self.backend.list_models()
+
+    def test_validates_response_size_limit(self) -> None:
+        for value in (True, 0, -1, 1.5):
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(ValueError, "positive integer"):
+                    OpenAICompatibleBackend(max_response_bytes=value)
 
     def test_parses_tool_call_and_logprobs(self) -> None:
         completion = self.backend.complete(
