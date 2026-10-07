@@ -1,11 +1,43 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from aimo3_inference.cli import _evaluate
-from aimo3_inference.models import SolveOutcome
+from aimo3_inference.cli import _evaluate, _outcome_json
+from aimo3_inference.models import AttemptResult, SolveOutcome
+
+
+class OutcomeJsonTests(unittest.TestCase):
+    def test_reports_aggregate_usage(self) -> None:
+        outcome = SolveOutcome(
+            answer=42,
+            attempts_completed=2,
+            stopped_early=False,
+            candidates=(),
+            attempts=(
+                AttemptResult(
+                    attempt_id=0,
+                    answer=42,
+                    generated_tokens=120,
+                    python_calls=2,
+                    python_errors=1,
+                ),
+                AttemptResult(
+                    attempt_id=1,
+                    answer=42,
+                    generated_tokens=80,
+                    python_calls=1,
+                ),
+            ),
+        )
+
+        payload = json.loads(_outcome_json(outcome))
+
+        self.assertEqual(payload["generated_tokens"], 200)
+        self.assertEqual(payload["python_calls"], 3)
+        self.assertEqual(payload["python_errors"], 1)
 
 
 class EvaluateOutputTests(unittest.TestCase):

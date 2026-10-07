@@ -197,6 +197,9 @@ def _outcome_json(outcome: SolveOutcome) -> str:
             "stopped_early": outcome.stopped_early,
             "stop_reason": outcome.stop_reason,
             "elapsed_seconds": round(outcome.elapsed_seconds, 6),
+            "generated_tokens": sum(item.generated_tokens for item in outcome.attempts),
+            "python_calls": sum(item.python_calls for item in outcome.attempts),
+            "python_errors": sum(item.python_errors for item in outcome.attempts),
             "candidates": [
                 {"answer": item.answer, "votes": item.votes}
                 for item in outcome.candidates
