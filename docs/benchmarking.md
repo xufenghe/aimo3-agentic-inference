@@ -10,7 +10,7 @@ Use one JSON object per line:
 {"id":"unique-id","problem":"Problem text","answer":42}
 ```
 
-`answer` may be omitted for blind inference. Keep private or licensed datasets outside the repository; `data/` is ignored by Git.
+`id` must be unique within the file, and `answer` may be omitted for blind inference. Keep private or licensed datasets outside the repository; `data/` is ignored by Git.
 
 ## Comparison protocol
 

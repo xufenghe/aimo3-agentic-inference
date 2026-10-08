@@ -25,6 +25,7 @@ def read_replay_jsonl(path: str | Path) -> Iterator[ReplayRecord]:
     """Read replay records without accepting problem text or model reasoning."""
 
     source = Path(path)
+    id_lines: dict[str, int] = {}
     with source.open(encoding="utf-8") as handle:
         for line_number, raw in enumerate(handle, start=1):
             if not raw.strip():
@@ -33,7 +34,14 @@ def read_replay_jsonl(path: str | Path) -> Iterator[ReplayRecord]:
                 row = json.loads(raw)
             except json.JSONDecodeError as exc:
                 raise ValueError(f"{source}:{line_number}: invalid JSON") from exc
-            yield _parse_replay_record(row, source=source, line_number=line_number)
+            record = _parse_replay_record(row, source=source, line_number=line_number)
+            if record.id in id_lines:
+                raise ValueError(
+                    f"{source}:{line_number}: duplicate id {record.id!r}; "
+                    f"first seen on line {id_lines[record.id]}"
+                )
+            id_lines[record.id] = line_number
+            yield record
 
 
 def summarize_replay(records: Sequence[ReplayRecord]) -> dict[str, Any]:

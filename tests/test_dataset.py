@@ -27,6 +27,17 @@ class DatasetTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "answer must be"):
                 list(read_jsonl(path))
 
+    def test_rejects_duplicate_ids(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "duplicates.jsonl"
+            path.write_text(
+                '{"id":"same","problem":"p1"}\n'
+                '{"id":"same","problem":"p2"}\n',
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "duplicate id 'same'; first seen on line 1"):
+                list(read_jsonl(path))
+
 
 if __name__ == "__main__":
     unittest.main()

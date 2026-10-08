@@ -10,7 +10,7 @@ Each JSONL row represents one problem but deliberately excludes the problem text
 {"id":"case-1","expected":42,"attempts":[{"answer":42,"mean_entropy":0.2},{"answer":7,"mean_entropy":0.9}]}
 ```
 
-- `id` identifies the case and may be a string or number.
+- `id` uniquely identifies the case within the file and may be a string or number.
 - `expected` is an optional integer gold answer.
 - `attempts` is a list of attempt summaries.
 - `answer` is an integer or `null` when parsing failed.

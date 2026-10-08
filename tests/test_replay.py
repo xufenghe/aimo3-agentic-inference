@@ -66,6 +66,15 @@ class ReplayTests(unittest.TestCase):
                 ]
             )
 
+    def test_rejects_duplicate_ids(self) -> None:
+        with self.assertRaisesRegex(ValueError, "duplicate id 'same'; first seen on line 1"):
+            self._read(
+                [
+                    {"id": "same", "attempts": []},
+                    {"id": "same", "attempts": []},
+                ]
+            )
+
     def _read(self, rows: list[dict[str, object]]):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "replay.jsonl"
