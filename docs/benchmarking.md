@@ -29,7 +29,7 @@ Change one setting at a time. Good first comparisons are tool on/off, one versus
 
 Track exact-match accuracy, coverage, median time, attempts completed, generated tokens, Python calls, Python errors, and stop reasons. Accuracy by itself can hide a configuration that times out or uses much more compute.
 
-The built-in writer keeps aggregate outcomes and leaves out prompts and chain-of-thought. Public result files should do the same when the problems are private or licensed.
+The evaluator prints a final JSON summary with these aggregate metrics, while the built-in writer keeps per-record outcomes and leaves out prompts and chain-of-thought. Public result files should do the same when the problems are private or licensed.
 
 ## Evidence labels
 

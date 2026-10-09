@@ -8,7 +8,9 @@ import os
 import sys
 import tempfile
 import time
+from collections import Counter
 from collections.abc import Sequence
+from statistics import median
 
 from .backends.openai_compatible import BackendError, OpenAICompatibleBackend
 from .config import MathRunnerConfig, SolverConfig
@@ -146,10 +148,24 @@ def _evaluate(args: argparse.Namespace) -> int:
     try:
         writer = JsonlRunWriter(temporary_path)
         rows: list[tuple[int | None, int | None]] = []
+        elapsed_seconds: list[float] = []
+        answered_records = 0
+        attempts_completed = 0
+        generated_tokens = 0
+        python_calls = 0
+        python_errors = 0
+        stop_reasons: Counter[str] = Counter()
         for record in read_jsonl(args.dataset):
             outcome = _solve_record(record, args)
             writer.write(record, outcome)
             rows.append((outcome.answer, record.answer))
+            elapsed_seconds.append(outcome.elapsed_seconds)
+            answered_records += int(outcome.answer is not None)
+            attempts_completed += outcome.attempts_completed
+            generated_tokens += sum(item.generated_tokens for item in outcome.attempts)
+            python_calls += sum(item.python_calls for item in outcome.attempts)
+            python_errors += sum(item.python_errors for item in outcome.attempts)
+            stop_reasons[outcome.stop_reason] += 1
             print(
                 json.dumps(
                     {
@@ -168,7 +184,25 @@ def _evaluate(args: argparse.Namespace) -> int:
         if os.path.exists(temporary_path):
             os.unlink(temporary_path)
     value = accuracy(rows)
-    print(json.dumps({"records": len(rows), "accuracy": value, "output": args.output}))
+    print(
+        json.dumps(
+            {
+                "records": len(rows),
+                "scored_records": sum(expected is not None for _, expected in rows),
+                "accuracy": value,
+                "coverage": answered_records / len(rows) if rows else None,
+                "median_elapsed_seconds": (
+                    round(median(elapsed_seconds), 6) if elapsed_seconds else None
+                ),
+                "attempts_completed": attempts_completed,
+                "generated_tokens": generated_tokens,
+                "python_calls": python_calls,
+                "python_errors": python_errors,
+                "stop_reasons": dict(sorted(stop_reasons.items())),
+                "output": args.output,
+            }
+        )
+    )
     return 0
 
 

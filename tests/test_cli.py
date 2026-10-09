@@ -1,6 +1,8 @@
 import json
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -41,6 +43,63 @@ class OutcomeJsonTests(unittest.TestCase):
 
 
 class EvaluateOutputTests(unittest.TestCase):
+    def test_reports_aggregate_evaluation_metrics(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dataset = root / "problems.jsonl"
+            output = root / "results.jsonl"
+            dataset.write_text(
+                '{"id":"one","problem":"1+1","answer":2}\n'
+                '{"id":"two","problem":"2+2","answer":4}\n',
+                encoding="utf-8",
+            )
+            args = SimpleNamespace(dataset=str(dataset), output=str(output), overwrite=False)
+            outcomes = (
+                SolveOutcome(
+                    answer=2,
+                    attempts_completed=2,
+                    stopped_early=True,
+                    candidates=(),
+                    attempts=(
+                        AttemptResult(
+                            attempt_id=0,
+                            answer=2,
+                            generated_tokens=10,
+                            python_calls=2,
+                            python_errors=1,
+                        ),
+                    ),
+                    elapsed_seconds=3.0,
+                    stop_reason="consensus",
+                ),
+                SolveOutcome(
+                    answer=None,
+                    attempts_completed=1,
+                    stopped_early=False,
+                    candidates=(),
+                    elapsed_seconds=5.0,
+                    stop_reason="deadline",
+                ),
+            )
+            stdout = StringIO()
+
+            with patch("aimo3_inference.cli._solve_record", side_effect=outcomes), redirect_stdout(
+                stdout
+            ):
+                self.assertEqual(_evaluate(args), 0)
+
+            summary = json.loads(stdout.getvalue().splitlines()[-1])
+            self.assertEqual(summary["records"], 2)
+            self.assertEqual(summary["scored_records"], 2)
+            self.assertEqual(summary["accuracy"], 0.5)
+            self.assertEqual(summary["coverage"], 0.5)
+            self.assertEqual(summary["median_elapsed_seconds"], 4.0)
+            self.assertEqual(summary["attempts_completed"], 3)
+            self.assertEqual(summary["generated_tokens"], 10)
+            self.assertEqual(summary["python_calls"], 2)
+            self.assertEqual(summary["python_errors"], 1)
+            self.assertEqual(summary["stop_reasons"], {"consensus": 1, "deadline": 1})
+
     def test_failed_evaluation_preserves_existing_output(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
