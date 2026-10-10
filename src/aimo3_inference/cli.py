@@ -86,9 +86,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(json.dumps(summarize_replay(list(read_replay_jsonl(args.fixtures))), indent=2))
             return 0
         if args.command == "doctor":
-            backend = _backend_from_args(args)
-            print(json.dumps({"models": backend.list_models()}, indent=2))
-            return 0
+            return _doctor(args)
         if args.command == "solve":
             outcome = _solve_record(ProblemRecord(id="stdin", problem=args.problem), args)
             print(_outcome_json(outcome))
@@ -106,6 +104,27 @@ def _backend_from_args(args: argparse.Namespace) -> OpenAICompatibleBackend:
         args.base_url,
         api_key=os.getenv(args.api_key_env),
     )
+
+
+def _doctor(args: argparse.Namespace) -> int:
+    backend = _backend_from_args(args)
+    models = backend.list_models()
+    if args.model not in models:
+        available = ", ".join(models) if models else "none"
+        raise BackendError(
+            f"model {args.model!r} is not listed by the endpoint; available models: {available}"
+        )
+    print(
+        json.dumps(
+            {
+                "model": args.model,
+                "available": True,
+                "models": models,
+            },
+            indent=2,
+        )
+    )
+    return 0
 
 
 def _solve_record(record: ProblemRecord, args: argparse.Namespace) -> SolveOutcome:

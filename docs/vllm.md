@@ -24,6 +24,9 @@ export AIMO_API_KEY=local-token
 aimo3 doctor --base-url http://127.0.0.1:8000/v1 --model openai/gpt-oss-20b
 ```
 
+The command fails if the endpoint is reachable but does not list the requested model, which catches
+model-name and routing mistakes before a longer solve run.
+
 Then start with one inexpensive request:
 
 ```bash

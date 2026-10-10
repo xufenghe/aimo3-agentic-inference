@@ -36,7 +36,9 @@ aimo3 doctor \
   --model openai/gpt-oss-20b
 ```
 
-`doctor` calls the models route. If it works, routing and authentication are okay. The first `solve` call is still the real test of chat and tool-call compatibility.
+`doctor` calls the models route and confirms that the requested `--model` is listed. If it
+works, routing, authentication, and the model name are okay. The first `solve` call is still the
+real test of chat and tool-call compatibility.
 
 ## Solve one problem
 

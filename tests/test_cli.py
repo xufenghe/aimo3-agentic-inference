@@ -1,13 +1,13 @@
 import json
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from aimo3_inference.cli import _evaluate, _outcome_json
+from aimo3_inference.cli import _evaluate, _outcome_json, main
 from aimo3_inference.models import AttemptResult, SolveOutcome
 
 
@@ -40,6 +40,38 @@ class OutcomeJsonTests(unittest.TestCase):
         self.assertEqual(payload["generated_tokens"], 200)
         self.assertEqual(payload["python_calls"], 3)
         self.assertEqual(payload["python_errors"], 1)
+
+
+class DoctorTests(unittest.TestCase):
+    def test_confirms_requested_model_is_available(self) -> None:
+        backend = SimpleNamespace(list_models=lambda: ("model-a", "model-b"))
+        stdout = StringIO()
+
+        with patch("aimo3_inference.cli._backend_from_args", return_value=backend), redirect_stdout(
+            stdout
+        ):
+            self.assertEqual(main(["doctor", "--model", "model-b"]), 0)
+
+        self.assertEqual(
+            json.loads(stdout.getvalue()),
+            {
+                "model": "model-b",
+                "available": True,
+                "models": ["model-a", "model-b"],
+            },
+        )
+
+    def test_rejects_an_unlisted_requested_model(self) -> None:
+        backend = SimpleNamespace(list_models=lambda: ("model-a",))
+        stderr = StringIO()
+
+        with patch("aimo3_inference.cli._backend_from_args", return_value=backend), redirect_stderr(
+            stderr
+        ):
+            self.assertEqual(main(["doctor", "--model", "model-b"]), 2)
+
+        self.assertIn("model 'model-b' is not listed", stderr.getvalue())
+        self.assertIn("available models: model-a", stderr.getvalue())
 
 
 class EvaluateOutputTests(unittest.TestCase):
