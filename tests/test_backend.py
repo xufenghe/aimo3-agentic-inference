@@ -88,6 +88,21 @@ class OpenAICompatibleBackendTests(unittest.TestCase):
     def test_lists_models(self) -> None:
         self.assertEqual(self.backend.list_models(), ("openai/gpt-oss-20b",))
 
+    def test_rejects_malformed_model_entries(self) -> None:
+        invalid_rows = (
+            (None, r"data\[0\] must be an object"),
+            ({}, r"data\[0\]\.id must be a non-empty string"),
+            ({"id": 42}, r"data\[0\]\.id must be a non-empty string"),
+            ({"id": "  "}, r"data\[0\]\.id must be a non-empty string"),
+        )
+
+        for row, error in invalid_rows:
+            with self.subTest(row=row), patch.object(
+                self.backend, "_request_json", return_value={"data": [row]}
+            ):
+                with self.assertRaisesRegex(BackendError, error):
+                    self.backend.list_models()
+
     def test_rejects_oversized_responses_before_parsing(self) -> None:
         backend = OpenAICompatibleBackend("http://example.test/v1", max_response_bytes=4)
         with patch("urllib.request.urlopen", return_value=BytesIO(b'{"data":[]}')):
@@ -159,6 +174,37 @@ class OpenAICompatibleBackendTests(unittest.TestCase):
                 response = json.loads(json.dumps(base_response))
                 response["choices"][0]["message"]["tool_calls"] = [raw_call]
                 with self.assertRaisesRegex(BackendError, error):
+                    OpenAICompatibleBackend._parse_completion(response)
+
+    def test_rejects_falsy_non_array_tool_calls(self) -> None:
+        for tool_calls in ({}, "", 0, False):
+            with self.subTest(tool_calls=tool_calls):
+                response = {
+                    "choices": [
+                        {
+                            "message": {
+                                "role": "assistant",
+                                "content": "",
+                                "tool_calls": tool_calls,
+                            }
+                        }
+                    ]
+                }
+                with self.assertRaisesRegex(BackendError, "tool_calls must be an array"):
+                    OpenAICompatibleBackend._parse_completion(response)
+
+    def test_rejects_non_text_finish_reason(self) -> None:
+        for finish_reason in (0, False, [], {}):
+            with self.subTest(finish_reason=finish_reason):
+                response = {
+                    "choices": [
+                        {
+                            "message": {"role": "assistant", "content": "answer"},
+                            "finish_reason": finish_reason,
+                        }
+                    ]
+                }
+                with self.assertRaisesRegex(BackendError, "finish_reason must be a string or null"):
                     OpenAICompatibleBackend._parse_completion(response)
 
     def test_rejects_non_numeric_and_non_finite_logprobs(self) -> None:

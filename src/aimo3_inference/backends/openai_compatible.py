@@ -130,7 +130,17 @@ class OpenAICompatibleBackend:
         rows = data.get("data")
         if not isinstance(rows, list):
             raise BackendError("model endpoint returned no data array")
-        return tuple(str(row["id"]) for row in rows if isinstance(row, dict) and "id" in row)
+        model_ids: list[str] = []
+        for index, row in enumerate(rows):
+            if not isinstance(row, dict):
+                raise BackendError(f"model endpoint data[{index}] must be an object")
+            model_id = row.get("id")
+            if not isinstance(model_id, str) or not model_id.strip():
+                raise BackendError(
+                    f"model endpoint data[{index}].id must be a non-empty string"
+                )
+            model_ids.append(model_id)
+        return tuple(model_ids)
 
     def _request_json(
         self,
@@ -184,8 +194,10 @@ class OpenAICompatibleBackend:
             raise BackendError("assistant message content must be a string or null")
 
         calls: list[ToolCall] = []
-        raw_calls = message.get("tool_calls") or []
-        if not isinstance(raw_calls, list):
+        raw_calls = message.get("tool_calls")
+        if raw_calls is None:
+            raw_calls = []
+        elif not isinstance(raw_calls, list):
             raise BackendError("assistant tool_calls must be an array")
         for index, raw in enumerate(raw_calls):
             if not isinstance(raw, dict):
@@ -241,11 +253,15 @@ class OpenAICompatibleBackend:
                 if values:
                     logprob_rows.append(values)
 
+        finish_reason = choice.get("finish_reason")
+        if finish_reason is not None and not isinstance(finish_reason, str):
+            raise BackendError("choice finish_reason must be a string or null")
+
         return ChatCompletion(
             text=content or "",
             tool_calls=tuple(calls),
             token_logprobs=tuple(logprob_rows),
-            finish_reason=str(choice.get("finish_reason")) if choice.get("finish_reason") else None,
+            finish_reason=finish_reason,
             usage=_parse_usage(data.get("usage")),
             raw_message=dict(message),
         )
