@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import math
 import os
 import signal
 import subprocess
@@ -122,13 +123,22 @@ class LocalPythonTool:
         max_output_bytes: int = 32_000,
         policy: PythonPolicy | None = None,
     ) -> None:
-        if timeout <= 0:
-            raise ValueError("timeout must be positive")
-        if memory_mb < 64:
-            raise ValueError("memory_mb must be at least 64")
-        if max_output_bytes < 256:
-            raise ValueError("max_output_bytes must be at least 256")
-        self.timeout = timeout
+        if (
+            isinstance(timeout, bool)
+            or not isinstance(timeout, int | float)
+            or not math.isfinite(timeout)
+            or timeout <= 0
+        ):
+            raise ValueError("timeout must be a finite positive number")
+        if isinstance(memory_mb, bool) or not isinstance(memory_mb, int) or memory_mb < 64:
+            raise ValueError("memory_mb must be an integer of at least 64")
+        if (
+            isinstance(max_output_bytes, bool)
+            or not isinstance(max_output_bytes, int)
+            or max_output_bytes < 256
+        ):
+            raise ValueError("max_output_bytes must be an integer of at least 256")
+        self.timeout = float(timeout)
         self.memory_mb = memory_mb
         self.max_output_bytes = max_output_bytes
         self.policy = policy or PythonPolicy()
@@ -167,6 +177,18 @@ class LocalPythonTool:
                 ok=False,
                 elapsed_seconds=time.monotonic() - started,
                 error="; ".join(errors),
+            )
+
+        if timeout is not None and (
+            isinstance(timeout, bool)
+            or not isinstance(timeout, int | float)
+            or not math.isfinite(timeout)
+        ):
+            return ToolExecution(
+                output="",
+                ok=False,
+                elapsed_seconds=time.monotonic() - started,
+                error="tool timeout must be a finite number",
             )
 
         effective_timeout = min(timeout, self.timeout) if timeout is not None else self.timeout

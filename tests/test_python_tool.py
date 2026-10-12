@@ -1,5 +1,6 @@
 import unittest
 from io import BytesIO
+from unittest.mock import patch
 
 from aimo3_inference.tools import LocalPythonTool, PythonPolicy
 from aimo3_inference.tools.python_subprocess import _BoundedOutputCollector
@@ -25,6 +26,34 @@ class PythonPolicyTests(unittest.TestCase):
 
 
 class LocalPythonToolTests(unittest.TestCase):
+    def test_rejects_invalid_resource_limits(self) -> None:
+        for timeout in (True, 0, -1, float("nan"), float("inf"), "1"):
+            with self.subTest(timeout=timeout):
+                with self.assertRaisesRegex(ValueError, "finite positive number"):
+                    LocalPythonTool(timeout=timeout)
+
+        for memory_mb in (True, 63, 64.5):
+            with self.subTest(memory_mb=memory_mb):
+                with self.assertRaisesRegex(ValueError, "integer of at least 64"):
+                    LocalPythonTool(memory_mb=memory_mb)
+
+        for max_output_bytes in (True, 255, 256.5):
+            with self.subTest(max_output_bytes=max_output_bytes):
+                with self.assertRaisesRegex(ValueError, "integer of at least 256"):
+                    LocalPythonTool(max_output_bytes=max_output_bytes)
+
+    def test_rejects_non_finite_timeout_override_without_execution(self) -> None:
+        tool = LocalPythonTool()
+        for timeout in (True, float("nan"), float("inf"), "1"):
+            with self.subTest(timeout=timeout), patch(
+                "aimo3_inference.tools.python_subprocess.subprocess.Popen"
+            ) as popen:
+                result = tool.run("print(42)", timeout=timeout)
+
+                self.assertFalse(result.ok)
+                self.assertIn("finite number", result.error)
+                popen.assert_not_called()
+
     def test_executes_math(self) -> None:
         result = LocalPythonTool(timeout=2).run("import math\nprint(math.factorial(6))")
         self.assertTrue(result.ok, result.error)
