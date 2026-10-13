@@ -24,4 +24,8 @@ The parser accepts only these documented fields. Any additional field at either 
 aimo3 replay examples/replay_attempts.jsonl
 ```
 
-The deterministic JSON summary reports record count, scored record count, coverage and correct selections for vote-only and inverse-entropy policies, plus how often their selected answers disagree. Vote-only ties fall back to the smaller integer; inverse-entropy ties use the package's existing confidence ranking.
+The deterministic JSON summary reports record and scored-record counts, answered-record count,
+coverage rate, correct-selection count, and accuracy for vote-only and inverse-entropy policies. It
+also reports how often their selected answers disagree. Rates are `null` when their denominator is
+zero. Vote-only ties fall back to the smaller integer; inverse-entropy ties use the package's
+existing confidence ranking.

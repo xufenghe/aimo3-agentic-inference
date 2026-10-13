@@ -43,8 +43,42 @@ class ReplayTests(unittest.TestCase):
                 "scored_records": 2,
                 "disagreements": 1,
                 "policies": {
-                    "vote_only": {"coverage": 2, "correct": 1},
-                    "inverse_entropy": {"coverage": 2, "correct": 2},
+                    "vote_only": {
+                        "answered_records": 2,
+                        "coverage": 2 / 3,
+                        "correct": 1,
+                        "accuracy": 0.5,
+                    },
+                    "inverse_entropy": {
+                        "answered_records": 2,
+                        "coverage": 2 / 3,
+                        "correct": 2,
+                        "accuracy": 1.0,
+                    },
+                },
+            },
+        )
+
+    def test_empty_replay_reports_undefined_rates(self) -> None:
+        self.assertEqual(
+            summarize_replay([]),
+            {
+                "records": 0,
+                "scored_records": 0,
+                "disagreements": 0,
+                "policies": {
+                    "vote_only": {
+                        "answered_records": 0,
+                        "coverage": None,
+                        "correct": None,
+                        "accuracy": None,
+                    },
+                    "inverse_entropy": {
+                        "answered_records": 0,
+                        "coverage": None,
+                        "correct": None,
+                        "accuracy": None,
+                    },
                 },
             },
         )

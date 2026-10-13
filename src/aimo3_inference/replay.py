@@ -70,17 +70,21 @@ def summarize_replay(records: Sequence[ReplayRecord]) -> dict[str, Any]:
             policy_rows["vote_only"], policy_rows["inverse_entropy"], strict=True
         )
     )
+    total = len(records)
+    policy_summaries: dict[str, dict[str, int | float | None]] = {}
+    for name, answers in policy_rows.items():
+        answered = sum(answer is not None for answer in answers)
+        policy_summaries[name] = {
+            "answered_records": answered,
+            "coverage": answered / total if total else None,
+            "correct": correct[name] if scored else None,
+            "accuracy": correct[name] / scored if scored else None,
+        }
     return {
-        "records": len(records),
+        "records": total,
         "scored_records": scored,
         "disagreements": disagreements,
-        "policies": {
-            name: {
-                "coverage": sum(answer is not None for answer in answers),
-                "correct": correct[name] if scored else None,
-            }
-            for name, answers in policy_rows.items()
-        },
+        "policies": policy_summaries,
     }
 
 
