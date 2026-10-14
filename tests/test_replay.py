@@ -56,6 +56,14 @@ class ReplayTests(unittest.TestCase):
                         "accuracy": 1.0,
                     },
                 },
+                "comparison": {
+                    "scored_disagreements": 1,
+                    "both_correct": 1,
+                    "vote_only_only_correct": 0,
+                    "inverse_entropy_only_correct": 1,
+                    "both_incorrect": 0,
+                    "accuracy_delta": 0.5,
+                },
             },
         )
 
@@ -80,6 +88,48 @@ class ReplayTests(unittest.TestCase):
                         "accuracy": None,
                     },
                 },
+                "comparison": {
+                    "scored_disagreements": 0,
+                    "both_correct": 0,
+                    "vote_only_only_correct": 0,
+                    "inverse_entropy_only_correct": 0,
+                    "both_incorrect": 0,
+                    "accuracy_delta": None,
+                },
+            },
+        )
+
+    def test_paired_comparison_distinguishes_harm_from_shared_errors(self) -> None:
+        records = self._read(
+            [
+                {
+                    "id": "entropy-harms",
+                    "expected": 7,
+                    "attempts": [
+                        {"answer": 7, "mean_entropy": 0.9},
+                        {"answer": 9, "mean_entropy": 0.1},
+                    ],
+                },
+                {
+                    "id": "both-wrong",
+                    "expected": 5,
+                    "attempts": [
+                        {"answer": 7, "mean_entropy": 0.9},
+                        {"answer": 9, "mean_entropy": 0.1},
+                    ],
+                },
+            ]
+        )
+
+        self.assertEqual(
+            summarize_replay(records)["comparison"],
+            {
+                "scored_disagreements": 2,
+                "both_correct": 0,
+                "vote_only_only_correct": 1,
+                "inverse_entropy_only_correct": 0,
+                "both_incorrect": 1,
+                "accuracy_delta": -0.5,
             },
         )
 

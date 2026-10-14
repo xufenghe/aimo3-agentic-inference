@@ -70,6 +70,26 @@ def summarize_replay(records: Sequence[ReplayRecord]) -> dict[str, Any]:
             policy_rows["vote_only"], policy_rows["inverse_entropy"], strict=True
         )
     )
+    scored_pairs = [
+        (record.expected, vote, entropy)
+        for record, vote, entropy in zip(
+            records,
+            policy_rows["vote_only"],
+            policy_rows["inverse_entropy"],
+            strict=True,
+        )
+        if record.expected is not None
+    ]
+    both_correct = sum(
+        vote == expected and entropy == expected for expected, vote, entropy in scored_pairs
+    )
+    vote_only_only_correct = sum(
+        vote == expected and entropy != expected for expected, vote, entropy in scored_pairs
+    )
+    inverse_entropy_only_correct = sum(
+        vote != expected and entropy == expected for expected, vote, entropy in scored_pairs
+    )
+    both_incorrect = scored - both_correct - vote_only_only_correct - inverse_entropy_only_correct
     total = len(records)
     policy_summaries: dict[str, dict[str, int | float | None]] = {}
     for name, answers in policy_rows.items():
@@ -85,6 +105,20 @@ def summarize_replay(records: Sequence[ReplayRecord]) -> dict[str, Any]:
         "scored_records": scored,
         "disagreements": disagreements,
         "policies": policy_summaries,
+        "comparison": {
+            "scored_disagreements": sum(
+                vote != entropy for _, vote, entropy in scored_pairs
+            ),
+            "both_correct": both_correct,
+            "vote_only_only_correct": vote_only_only_correct,
+            "inverse_entropy_only_correct": inverse_entropy_only_correct,
+            "both_incorrect": both_incorrect,
+            "accuracy_delta": (
+                (correct["inverse_entropy"] - correct["vote_only"]) / scored
+                if scored
+                else None
+            ),
+        },
     }
 
 
