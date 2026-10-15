@@ -26,7 +26,8 @@ aimo3 replay examples/replay_attempts.jsonl
 
 The deterministic JSON summary reports record and scored-record counts, answered-record count,
 coverage rate, correct-selection count, and accuracy for vote-only and inverse-entropy policies. It
-also reports how often their selected answers disagree. The paired comparison separates scored
+includes a 95% Wilson confidence interval for each policy's accuracy and reports how often their
+selected answers disagree. The paired comparison separates scored
 cases where both policies are correct or incorrect from cases fixed or harmed by inverse entropy;
 `accuracy_delta` is inverse-entropy accuracy minus vote-only accuracy. Rates and deltas are `null`
 when their denominator is zero. Vote-only ties fall back to the smaller integer; inverse-entropy

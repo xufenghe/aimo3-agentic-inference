@@ -14,7 +14,7 @@ from statistics import median
 
 from .backends.openai_compatible import BackendError, OpenAICompatibleBackend
 from .config import MathRunnerConfig, SolverConfig
-from .dataset import accuracy, read_jsonl
+from .dataset import accuracy, read_jsonl, wilson_interval
 from .models import AttemptContext, AttemptResult, ProblemRecord, SolveOutcome
 from .orchestrator import InferenceOrchestrator
 from .replay import read_replay_jsonl, summarize_replay
@@ -203,12 +203,19 @@ def _evaluate(args: argparse.Namespace) -> int:
         if os.path.exists(temporary_path):
             os.unlink(temporary_path)
     value = accuracy(rows)
+    scored_records = sum(expected is not None for _, expected in rows)
+    correct_records = sum(
+        predicted == expected
+        for predicted, expected in rows
+        if expected is not None
+    )
     print(
         json.dumps(
             {
                 "records": len(rows),
-                "scored_records": sum(expected is not None for _, expected in rows),
+                "scored_records": scored_records,
                 "accuracy": value,
+                "accuracy_95_ci": wilson_interval(correct_records, scored_records),
                 "coverage": answered_records / len(rows) if rows else None,
                 "median_elapsed_seconds": (
                     round(median(elapsed_seconds), 6) if elapsed_seconds else None

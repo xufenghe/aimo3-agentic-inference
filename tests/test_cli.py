@@ -124,6 +124,10 @@ class EvaluateOutputTests(unittest.TestCase):
             self.assertEqual(summary["records"], 2)
             self.assertEqual(summary["scored_records"], 2)
             self.assertEqual(summary["accuracy"], 0.5)
+            self.assertEqual(
+                summary["accuracy_95_ci"],
+                [0.09453120573423074, 0.9054687942657693],
+            )
             self.assertEqual(summary["coverage"], 0.5)
             self.assertEqual(summary["median_elapsed_seconds"], 4.0)
             self.assertEqual(summary["attempts_completed"], 3)

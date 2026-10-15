@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from .consensus import InverseEntropyConsensus
+from .dataset import wilson_interval
 from .models import AttemptResult
 
 
@@ -99,6 +100,7 @@ def summarize_replay(records: Sequence[ReplayRecord]) -> dict[str, Any]:
             "coverage": answered / total if total else None,
             "correct": correct[name] if scored else None,
             "accuracy": correct[name] / scored if scored else None,
+            "accuracy_95_ci": wilson_interval(correct[name], scored),
         }
     return {
         "records": total,

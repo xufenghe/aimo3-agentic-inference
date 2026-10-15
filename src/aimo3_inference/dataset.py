@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from collections.abc import Iterable, Iterator
 from pathlib import Path
 from typing import Any
@@ -40,6 +41,36 @@ def accuracy(rows: Iterable[tuple[int | None, int | None]]) -> float | None:
     if not scored:
         return None
     return sum(predicted == expected for predicted, expected in scored) / len(scored)
+
+
+def wilson_interval(successes: int, total: int) -> tuple[float, float] | None:
+    """Return a 95% Wilson score interval for a binomial proportion."""
+
+    if (
+        isinstance(successes, bool)
+        or isinstance(total, bool)
+        or not isinstance(successes, int)
+        or not isinstance(total, int)
+        or total < 0
+        or not 0 <= successes <= total
+    ):
+        raise ValueError("successes and total must satisfy 0 <= successes <= total")
+    if total == 0:
+        return None
+
+    z = 1.959963984540054
+    proportion = successes / total
+    z_squared = z * z
+    denominator = 1 + z_squared / total
+    center = (proportion + z_squared / (2 * total)) / denominator
+    margin = (
+        z
+        * math.sqrt(
+            (proportion * (1 - proportion) + z_squared / (4 * total)) / total
+        )
+        / denominator
+    )
+    return max(0.0, center - margin), min(1.0, center + margin)
 
 
 def _parse_record(row: Any, *, source: Path, line_number: int) -> ProblemRecord:

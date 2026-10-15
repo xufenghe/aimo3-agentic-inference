@@ -48,12 +48,17 @@ class ReplayTests(unittest.TestCase):
                         "coverage": 2 / 3,
                         "correct": 1,
                         "accuracy": 0.5,
+                        "accuracy_95_ci": (
+                            0.09453120573423074,
+                            0.9054687942657693,
+                        ),
                     },
                     "inverse_entropy": {
                         "answered_records": 2,
                         "coverage": 2 / 3,
                         "correct": 2,
                         "accuracy": 1.0,
+                        "accuracy_95_ci": (0.34238022750665303, 1.0),
                     },
                 },
                 "comparison": {
@@ -80,12 +85,14 @@ class ReplayTests(unittest.TestCase):
                         "coverage": None,
                         "correct": None,
                         "accuracy": None,
+                        "accuracy_95_ci": None,
                     },
                     "inverse_entropy": {
                         "answered_records": 0,
                         "coverage": None,
                         "correct": None,
                         "accuracy": None,
+                        "accuracy_95_ci": None,
                     },
                 },
                 "comparison": {

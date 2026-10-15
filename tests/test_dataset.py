@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from aimo3_inference.dataset import accuracy, read_jsonl
+from aimo3_inference.dataset import accuracy, read_jsonl, wilson_interval
 
 
 class DatasetTests(unittest.TestCase):
@@ -38,6 +38,24 @@ class DatasetTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "duplicate id 'same'; first seen on line 1"):
                 list(read_jsonl(path))
 
+
+class WilsonIntervalTests(unittest.TestCase):
+    def test_reports_known_half_success_interval(self) -> None:
+        interval = wilson_interval(1, 2)
+
+        self.assertIsNotNone(interval)
+        assert interval is not None
+        self.assertAlmostEqual(interval[0], 0.09453120573423074)
+        self.assertAlmostEqual(interval[1], 0.9054687942657693)
+
+    def test_returns_none_without_observations(self) -> None:
+        self.assertIsNone(wilson_interval(0, 0))
+
+    def test_rejects_invalid_counts(self) -> None:
+        for successes, total in ((-1, 1), (2, 1), (0, -1), (True, 1), (0, False)):
+            with self.subTest(successes=successes, total=total):
+                with self.assertRaisesRegex(ValueError, "0 <= successes <= total"):
+                    wilson_interval(successes, total)
 
 if __name__ == "__main__":
     unittest.main()
