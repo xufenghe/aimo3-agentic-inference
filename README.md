@@ -92,10 +92,11 @@ aimo3 evaluate examples/problems.jsonl \
   --model openai/gpt-oss-20b \
   --attempts 8 \
   --early-stop 4 \
+  --seed-base 42 \
   --output outputs/results.jsonl
 ```
 
-The command will not replace an existing result file unless you pass `--overwrite`. Results are published only after the full evaluation succeeds; a failed run leaves an existing result file intact. See [benchmarking](docs/benchmarking.md) before comparing two configurations.
+The command will not replace an existing result file unless you pass `--overwrite`. Results are published only after the full evaluation succeeds; a failed run leaves an existing result file intact. The final summary records the non-secret runtime configuration for reproducibility. See [benchmarking](docs/benchmarking.md) before comparing two configurations.
 
 To compare vote-only and inverse-entropy selection without another model run, use `aimo3 replay` with saved attempt metadata. The [replay guide](docs/replay.md) documents the privacy-conscious fixture schema.
 

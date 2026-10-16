@@ -22,6 +22,13 @@ class MathRunnerConfigTests(unittest.TestCase):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 MathRunnerConfig(model="test-model", request_timeout=value)
 
+    def test_rejects_non_integer_seed_base(self) -> None:
+        for value in (True, 1.5, "42"):
+            with self.subTest(value=value), self.assertRaisesRegex(
+                ValueError, "seed_base must be an integer"
+            ):
+                MathRunnerConfig(model="test-model", seed_base=value)
+
 
 if __name__ == "__main__":
     unittest.main()

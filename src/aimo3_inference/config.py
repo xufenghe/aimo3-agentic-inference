@@ -75,5 +75,7 @@ class MathRunnerConfig:
             raise ValueError("max_tool_rounds cannot be negative")
         if not math.isfinite(self.request_timeout) or self.request_timeout <= 0:
             raise ValueError("request_timeout must be finite and positive")
+        if isinstance(self.seed_base, bool) or not isinstance(self.seed_base, int):
+            raise ValueError("seed_base must be an integer")
         if not self.reasoning_families:
             raise ValueError("at least one reasoning family is required")

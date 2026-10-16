@@ -69,6 +69,7 @@ def _add_runtime_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--max-tokens", type=int, default=16_384)
     parser.add_argument("--temperature", type=float, default=1.0)
     parser.add_argument("--max-tool-rounds", type=int, default=8)
+    parser.add_argument("--seed-base", type=int, default=42)
     parser.add_argument(
         "--reasoning-effort",
         choices=("none", "low", "medium", "high"),
@@ -136,6 +137,7 @@ def _solve_record(record: ProblemRecord, args: argparse.Namespace) -> SolveOutco
         max_tool_rounds=args.max_tool_rounds,
         request_timeout=args.timeout,
         reasoning_effort=None if args.reasoning_effort == "none" else args.reasoning_effort,
+        seed_base=args.seed_base,
     )
     solver_config = SolverConfig(
         attempts=args.attempts,
@@ -225,6 +227,21 @@ def _evaluate(args: argparse.Namespace) -> int:
                 "python_calls": python_calls,
                 "python_errors": python_errors,
                 "stop_reasons": dict(sorted(stop_reasons.items())),
+                "configuration": {
+                    "model": args.model,
+                    "attempts": args.attempts,
+                    "workers": args.workers,
+                    "early_stop": args.early_stop,
+                    "timeout_seconds": args.timeout,
+                    "max_tokens": args.max_tokens,
+                    "temperature": args.temperature,
+                    "max_tool_rounds": args.max_tool_rounds,
+                    "reasoning_effort": (
+                        None if args.reasoning_effort == "none" else args.reasoning_effort
+                    ),
+                    "seed_base": args.seed_base,
+                    "python_tool_enabled": not args.no_python_tool,
+                },
                 "output": args.output,
             }
         )

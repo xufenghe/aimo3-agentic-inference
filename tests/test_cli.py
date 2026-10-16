@@ -7,8 +7,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from aimo3_inference.cli import _evaluate, _outcome_json, main
-from aimo3_inference.models import AttemptResult, SolveOutcome
+from aimo3_inference.cli import _evaluate, _outcome_json, _solve_record, build_parser, main
+from aimo3_inference.models import AttemptResult, ProblemRecord, SolveOutcome
 
 
 class OutcomeJsonTests(unittest.TestCase):
@@ -75,6 +75,25 @@ class DoctorTests(unittest.TestCase):
 
 
 class EvaluateOutputTests(unittest.TestCase):
+    @staticmethod
+    def _args(dataset: Path, output: Path, *, overwrite: bool) -> SimpleNamespace:
+        return SimpleNamespace(
+            dataset=str(dataset),
+            output=str(output),
+            overwrite=overwrite,
+            model="model-a",
+            attempts=8,
+            workers=4,
+            early_stop=3,
+            timeout=120.0,
+            max_tokens=4096,
+            temperature=0.7,
+            max_tool_rounds=5,
+            reasoning_effort="medium",
+            seed_base=123,
+            no_python_tool=False,
+        )
+
     def test_reports_aggregate_evaluation_metrics(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -85,7 +104,7 @@ class EvaluateOutputTests(unittest.TestCase):
                 '{"id":"two","problem":"2+2","answer":4}\n',
                 encoding="utf-8",
             )
-            args = SimpleNamespace(dataset=str(dataset), output=str(output), overwrite=False)
+            args = self._args(dataset, output, overwrite=False)
             outcomes = (
                 SolveOutcome(
                     answer=2,
@@ -135,6 +154,22 @@ class EvaluateOutputTests(unittest.TestCase):
             self.assertEqual(summary["python_calls"], 2)
             self.assertEqual(summary["python_errors"], 1)
             self.assertEqual(summary["stop_reasons"], {"consensus": 1, "deadline": 1})
+            self.assertEqual(
+                summary["configuration"],
+                {
+                    "model": "model-a",
+                    "attempts": 8,
+                    "workers": 4,
+                    "early_stop": 3,
+                    "timeout_seconds": 120.0,
+                    "max_tokens": 4096,
+                    "temperature": 0.7,
+                    "max_tool_rounds": 5,
+                    "reasoning_effort": "medium",
+                    "seed_base": 123,
+                    "python_tool_enabled": True,
+                },
+            )
 
     def test_failed_evaluation_preserves_existing_output(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -147,7 +182,7 @@ class EvaluateOutputTests(unittest.TestCase):
                 encoding="utf-8",
             )
             output.write_text("previous results\n", encoding="utf-8")
-            args = SimpleNamespace(dataset=str(dataset), output=str(output), overwrite=True)
+            args = self._args(dataset, output, overwrite=True)
 
             with patch(
                 "aimo3_inference.cli._solve_record", return_value=SolveOutcome(2, 1, False, ())
@@ -166,7 +201,7 @@ class EvaluateOutputTests(unittest.TestCase):
             output = root / "results.jsonl"
             dataset.write_text('{"id":"one","problem":"1+1","answer":2}\n', encoding="utf-8")
             output.write_text("previous results\n", encoding="utf-8")
-            args = SimpleNamespace(dataset=str(dataset), output=str(output), overwrite=True)
+            args = self._args(dataset, output, overwrite=True)
 
             with patch(
                 "aimo3_inference.cli._solve_record", return_value=SolveOutcome(2, 1, False, ())
@@ -184,7 +219,7 @@ class EvaluateOutputTests(unittest.TestCase):
             dataset = root / "problems.jsonl"
             output = root / "results.jsonl"
             dataset.write_text('{"problem":"1+1"}\n', encoding="utf-8")
-            args = SimpleNamespace(dataset=str(dataset), output=str(output), overwrite=False)
+            args = self._args(dataset, output, overwrite=False)
 
             with patch("aimo3_inference.cli._solve_record", side_effect=ValueError("model failed")):
                 with self.assertRaisesRegex(ValueError, "model failed"):
@@ -198,7 +233,7 @@ class EvaluateOutputTests(unittest.TestCase):
             dataset = root / "problems.jsonl"
             output = root / "results.jsonl"
             dataset.write_text('{"problem":"1+1","answer":2}\n', encoding="utf-8")
-            args = SimpleNamespace(dataset=str(dataset), output=str(output), overwrite=False)
+            args = self._args(dataset, output, overwrite=False)
 
             with patch(
                 "aimo3_inference.cli._solve_record", return_value=SolveOutcome(2, 1, False, ())
@@ -209,6 +244,24 @@ class EvaluateOutputTests(unittest.TestCase):
             self.assertEqual(
                 sorted(path.name for path in root.iterdir()), ["problems.jsonl", "results.jsonl"]
             )
+
+
+class RuntimeConfigurationTests(unittest.TestCase):
+    def test_seed_base_reaches_math_runner_config(self) -> None:
+        args = build_parser().parse_args(
+            ["solve", "1+1", "--model", "model-a", "--seed-base", "123"]
+        )
+        outcome = SolveOutcome(2, 1, False, ())
+
+        with (
+            patch("aimo3_inference.cli._backend_from_args", return_value=object()),
+            patch("aimo3_inference.cli.ToolAugmentedMathRunner") as runner_class,
+            patch("aimo3_inference.cli.InferenceOrchestrator") as solver_class,
+        ):
+            solver_class.return_value.solve.return_value = outcome
+            self.assertIs(_solve_record(ProblemRecord("one", "1+1"), args), outcome)
+
+        self.assertEqual(runner_class.call_args.kwargs["config"].seed_base, 123)
 
 
 if __name__ == "__main__":

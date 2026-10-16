@@ -29,7 +29,13 @@ Change one setting at a time. Good first comparisons are tool on/off, one versus
 
 Track exact-match accuracy, its 95% Wilson confidence interval, coverage, median time, attempts completed, generated tokens, Python calls, Python errors, and stop reasons. Accuracy by itself can hide both sampling uncertainty and a configuration that times out or uses much more compute.
 
-The evaluator prints a final JSON summary with these aggregate metrics. `accuracy_95_ci` is `null` when no records have gold answers; otherwise it is a two-element `[lower, upper]` interval. The built-in writer keeps per-record outcomes and leaves out prompts and chain-of-thought. Public result files should do the same when the problems are private or licensed.
+The evaluator prints a final JSON summary with these aggregate metrics and a privacy-conscious
+snapshot of the runtime configuration. Use `--seed-base` to select the deterministic seed sequence;
+the summary records it alongside the model, attempt budget, timeout, sampling temperature, and tool
+settings. It deliberately omits API keys and endpoint URLs. `accuracy_95_ci` is `null` when no
+records have gold answers; otherwise it is a two-element `[lower, upper]` interval. The built-in
+writer keeps per-record outcomes and leaves out prompts and chain-of-thought. Public result files
+should do the same when the problems are private or licensed.
 
 ## Evidence labels
 
