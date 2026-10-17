@@ -32,10 +32,13 @@ Track exact-match accuracy, its 95% Wilson confidence interval, coverage, median
 The evaluator prints a final JSON summary with these aggregate metrics and a privacy-conscious
 snapshot of the runtime configuration. Use `--seed-base` to select the deterministic seed sequence;
 the summary records it alongside the model, attempt budget, timeout, sampling temperature, and tool
-settings. It deliberately omits API keys and endpoint URLs. `accuracy_95_ci` is `null` when no
-records have gold answers; otherwise it is a two-element `[lower, upper]` interval. The built-in
-writer keeps per-record outcomes and leaves out prompts and chain-of-thought. Public result files
-should do the same when the problems are private or licensed.
+settings. It also records `dataset_sha256`, a SHA-256 fingerprint of the exact JSONL bytes, so two
+runs can confirm that they used the same input without publishing the dataset. If the dataset changes
+during evaluation, the command aborts without publishing the result file. The summary deliberately
+omits API keys and endpoint URLs. `accuracy_95_ci` is `null` when no records have gold answers;
+otherwise it is a two-element `[lower, upper]` interval. The built-in writer keeps per-record outcomes
+and leaves out prompts and chain-of-thought. Public result files should do the same when the problems
+are private or licensed.
 
 ## Evidence labels
 

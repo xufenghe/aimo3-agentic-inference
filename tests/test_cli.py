@@ -1,3 +1,4 @@
+import hashlib
 import json
 import tempfile
 import unittest
@@ -155,6 +156,10 @@ class EvaluateOutputTests(unittest.TestCase):
             self.assertEqual(summary["python_errors"], 1)
             self.assertEqual(summary["stop_reasons"], {"consensus": 1, "deadline": 1})
             self.assertEqual(
+                summary["dataset_sha256"],
+                hashlib.sha256(dataset.read_bytes()).hexdigest(),
+            )
+            self.assertEqual(
                 summary["configuration"],
                 {
                     "model": "model-a",
@@ -225,6 +230,32 @@ class EvaluateOutputTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "model failed"):
                     _evaluate(args)
 
+            self.assertEqual([path.name for path in root.iterdir()], ["problems.jsonl"])
+
+    def test_dataset_change_during_evaluation_does_not_publish_results(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dataset = root / "problems.jsonl"
+            output = root / "results.jsonl"
+            dataset.write_text('{"id":"one","problem":"1+1","answer":2}\n', encoding="utf-8")
+            args = self._args(dataset, output, overwrite=False)
+
+            def mutate_dataset(
+                _record: ProblemRecord, _args: SimpleNamespace
+            ) -> SolveOutcome:
+                replacement = root / "replacement.jsonl"
+                replacement.write_text(
+                    '{"id":"changed","problem":"2+2","answer":4}\n',
+                    encoding="utf-8",
+                )
+                replacement.replace(dataset)
+                return SolveOutcome(2, 1, False, ())
+
+            with patch("aimo3_inference.cli._solve_record", side_effect=mutate_dataset):
+                with self.assertRaisesRegex(ValueError, "dataset changed during evaluation"):
+                    _evaluate(args)
+
+            self.assertFalse(output.exists())
             self.assertEqual([path.name for path in root.iterdir()], ["problems.jsonl"])
 
     def test_new_output_is_published_without_overwrite(self) -> None:

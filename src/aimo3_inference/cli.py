@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -155,12 +156,21 @@ def _solve_record(record: ProblemRecord, args: argparse.Namespace) -> SolveOutco
     return solver.solve(runner, deadline=time.monotonic() + args.timeout)
 
 
+def _sha256_file(path: str | os.PathLike[str]) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def _evaluate(args: argparse.Namespace) -> int:
     output_path = os.path.abspath(args.output)
     if os.path.exists(output_path) and not args.overwrite:
         raise ValueError(
             f"output already exists: {args.output}; pass --overwrite to replace it"
         )
+    dataset_sha256 = _sha256_file(args.dataset)
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     fd, temporary_path = tempfile.mkstemp(
         prefix=f".{os.path.basename(output_path)}.", suffix=".tmp", dir=os.path.dirname(output_path)
@@ -197,6 +207,8 @@ def _evaluate(args: argparse.Namespace) -> int:
                     }
                 )
             )
+        if _sha256_file(args.dataset) != dataset_sha256:
+            raise ValueError("dataset changed during evaluation")
         if args.overwrite:
             os.replace(temporary_path, output_path)
         else:
@@ -227,6 +239,7 @@ def _evaluate(args: argparse.Namespace) -> int:
                 "python_calls": python_calls,
                 "python_errors": python_errors,
                 "stop_reasons": dict(sorted(stop_reasons.items())),
+                "dataset_sha256": dataset_sha256,
                 "configuration": {
                     "model": args.model,
                     "attempts": args.attempts,
