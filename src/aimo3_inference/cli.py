@@ -165,12 +165,20 @@ def _sha256_file(path: str | os.PathLike[str]) -> str:
 
 
 def _evaluate(args: argparse.Namespace) -> int:
+    dataset_path = os.path.abspath(args.dataset)
     output_path = os.path.abspath(args.output)
+    paths_resolve_to_same_file = os.path.realpath(dataset_path) == os.path.realpath(output_path)
+    if os.path.exists(dataset_path) and os.path.exists(output_path):
+        paths_resolve_to_same_file = paths_resolve_to_same_file or os.path.samefile(
+            dataset_path, output_path
+        )
+    if paths_resolve_to_same_file:
+        raise ValueError("output must not be the dataset file")
     if os.path.exists(output_path) and not args.overwrite:
         raise ValueError(
             f"output already exists: {args.output}; pass --overwrite to replace it"
         )
-    dataset_sha256 = _sha256_file(args.dataset)
+    dataset_sha256 = _sha256_file(dataset_path)
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     fd, temporary_path = tempfile.mkstemp(
         prefix=f".{os.path.basename(output_path)}.", suffix=".tmp", dir=os.path.dirname(output_path)
@@ -186,7 +194,7 @@ def _evaluate(args: argparse.Namespace) -> int:
         python_calls = 0
         python_errors = 0
         stop_reasons: Counter[str] = Counter()
-        for record in read_jsonl(args.dataset):
+        for record in read_jsonl(dataset_path):
             outcome = _solve_record(record, args)
             writer.write(record, outcome)
             rows.append((outcome.answer, record.answer))
@@ -207,7 +215,7 @@ def _evaluate(args: argparse.Namespace) -> int:
                     }
                 )
             )
-        if _sha256_file(args.dataset) != dataset_sha256:
+        if _sha256_file(dataset_path) != dataset_sha256:
             raise ValueError("dataset changed during evaluation")
         if args.overwrite:
             os.replace(temporary_path, output_path)

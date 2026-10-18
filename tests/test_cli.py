@@ -218,6 +218,24 @@ class EvaluateOutputTests(unittest.TestCase):
                 sorted(path.name for path in root.iterdir()), ["problems.jsonl", "results.jsonl"]
             )
 
+    def test_rejects_output_that_is_a_hard_link_to_the_dataset(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dataset = root / "problems.jsonl"
+            output = root / "results.jsonl"
+            original = '{"id":"one","problem":"1+1","answer":2}\n'
+            dataset.write_text(original, encoding="utf-8")
+            output.hardlink_to(dataset)
+            args = self._args(dataset, output, overwrite=True)
+
+            with patch("aimo3_inference.cli._solve_record") as solve_record:
+                with self.assertRaisesRegex(ValueError, "output must not be the dataset file"):
+                    _evaluate(args)
+
+            solve_record.assert_not_called()
+            self.assertEqual(dataset.read_text(encoding="utf-8"), original)
+            self.assertEqual(output.read_text(encoding="utf-8"), original)
+
     def test_failed_evaluation_does_not_publish_partial_new_output(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
