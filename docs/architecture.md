@@ -31,7 +31,8 @@ An outcome holds the selected answer, ranked candidates, completed attempts, ela
 ## Invariants
 
 - Deadlines use `time.monotonic()` and are absolute.
-- Only non-negative boxed integers in the configured range may enter consensus.
+- Only integer answers inside the configured `SolverConfig` bounds may enter consensus, including
+  when an application supplies a custom attempt runner instead of the boxed-integer parser.
 - Raw vote count outranks entropy-derived confidence.
 - Ties are deterministic.
 - Tool failures remain local to an attempt.

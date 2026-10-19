@@ -49,6 +49,30 @@ class InferenceOrchestratorTests(unittest.TestCase):
         outcome = solver.solve(runner, deadline=time.monotonic() + 2)
         self.assertEqual(outcome.answer, 9)
 
+    def test_excludes_attempt_answers_outside_the_configured_range(self) -> None:
+        def runner_for(answer: object):
+            def runner(context: AttemptContext) -> AttemptResult:
+                return AttemptResult(context.attempt_id, answer, 0.1)
+
+            return runner
+
+        for answer in (-1, 100, True, 1.5, "42"):
+            with self.subTest(answer=answer):
+                solver = InferenceOrchestrator(
+                    SolverConfig(
+                        attempts=1,
+                        workers=1,
+                        early_stop=1,
+                        min_answer=0,
+                        max_answer=99,
+                    )
+                )
+                outcome = solver.solve(runner_for(answer), deadline=time.monotonic() + 2)
+
+                self.assertIsNone(outcome.answer)
+                self.assertEqual(outcome.candidates, ())
+                self.assertEqual(outcome.attempts[0].answer, answer)
+
 
 if __name__ == "__main__":
     unittest.main()

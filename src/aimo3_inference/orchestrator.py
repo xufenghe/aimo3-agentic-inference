@@ -72,7 +72,9 @@ class InferenceOrchestrator:
                         )
                     completed.append(result)
 
-                counts = Counter(item.answer for item in completed if item.answer is not None)
+                counts = Counter(
+                    item.answer for item in completed if self._answer_is_in_range(item)
+                )
                 if (
                     len(completed) >= self.config.minimum_completed
                     and counts
@@ -87,7 +89,9 @@ class InferenceOrchestrator:
                 future.cancel()
             pool.shutdown(wait=False, cancel_futures=True)
 
-        candidates = self.selector.rank(completed)
+        candidates = self.selector.rank(
+            item for item in completed if self._answer_is_in_range(item)
+        )
         return SolveOutcome(
             answer=candidates[0].answer if candidates else None,
             attempts_completed=len(completed),
@@ -96,4 +100,12 @@ class InferenceOrchestrator:
             attempts=tuple(sorted(completed, key=lambda item: item.attempt_id)),
             elapsed_seconds=time.monotonic() - started,
             stop_reason=stop_reason,
+        )
+
+    def _answer_is_in_range(self, result: AttemptResult) -> bool:
+        answer = result.answer
+        return (
+            not isinstance(answer, bool)
+            and isinstance(answer, int)
+            and self.config.min_answer <= answer <= self.config.max_answer
         )
