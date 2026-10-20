@@ -4,6 +4,22 @@ from aimo3_inference.config import MathRunnerConfig, SolverConfig
 
 
 class SolverConfigTests(unittest.TestCase):
+    def test_rejects_non_integer_counts_and_answer_bounds(self) -> None:
+        fields = (
+            "attempts",
+            "workers",
+            "early_stop",
+            "min_answer",
+            "max_answer",
+            "minimum_completed",
+        )
+        for field in fields:
+            for value in (True, 1.5, "1"):
+                with self.subTest(field=field, value=value), self.assertRaisesRegex(
+                    ValueError, f"{field} must be an integer"
+                ):
+                    SolverConfig(**{field: value})
+
     def test_rejects_non_finite_entropy_floor(self) -> None:
         for value in (float("nan"), float("inf"), float("-inf")):
             with self.subTest(value=value), self.assertRaises(ValueError):

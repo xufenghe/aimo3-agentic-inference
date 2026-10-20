@@ -6,6 +6,11 @@ import math
 from dataclasses import dataclass
 
 
+def _require_integer(name: str, value: object) -> None:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"{name} must be an integer")
+
+
 @dataclass(frozen=True, slots=True)
 class SolverConfig:
     """Small set of orchestration knobs independent from a model backend."""
@@ -19,6 +24,15 @@ class SolverConfig:
     minimum_completed: int = 1
 
     def __post_init__(self) -> None:
+        for name in (
+            "attempts",
+            "workers",
+            "early_stop",
+            "min_answer",
+            "max_answer",
+            "minimum_completed",
+        ):
+            _require_integer(name, getattr(self, name))
         if self.attempts < 1:
             raise ValueError("attempts must be positive")
         if self.workers < 1:
