@@ -77,6 +77,8 @@ class MathRunnerConfig:
     def __post_init__(self) -> None:
         if not self.model.strip():
             raise ValueError("model cannot be empty")
+        for name in ("max_tokens", "top_logprobs", "max_tool_rounds", "seed_base"):
+            _require_integer(name, getattr(self, name))
         if self.max_tokens < 1:
             raise ValueError("max_tokens must be positive")
         if not math.isfinite(self.temperature) or self.temperature < 0:
@@ -89,7 +91,5 @@ class MathRunnerConfig:
             raise ValueError("max_tool_rounds cannot be negative")
         if not math.isfinite(self.request_timeout) or self.request_timeout <= 0:
             raise ValueError("request_timeout must be finite and positive")
-        if isinstance(self.seed_base, bool) or not isinstance(self.seed_base, int):
-            raise ValueError("seed_base must be an integer")
         if not self.reasoning_families:
             raise ValueError("at least one reasoning family is required")

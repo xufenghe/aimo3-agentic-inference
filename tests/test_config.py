@@ -27,6 +27,15 @@ class SolverConfigTests(unittest.TestCase):
 
 
 class MathRunnerConfigTests(unittest.TestCase):
+    def test_rejects_non_integer_generation_settings(self) -> None:
+        fields = ("max_tokens", "top_logprobs", "max_tool_rounds", "seed_base")
+        for field in fields:
+            for value in (True, 1.5, "1"):
+                with self.subTest(field=field, value=value), self.assertRaisesRegex(
+                    ValueError, f"{field} must be an integer"
+                ):
+                    MathRunnerConfig(model="test-model", **{field: value})
+
     def test_rejects_non_finite_sampling_parameters(self) -> None:
         for field in ("temperature", "top_p"):
             for value in (float("nan"), float("inf"), float("-inf")):
@@ -37,14 +46,6 @@ class MathRunnerConfigTests(unittest.TestCase):
         for value in (float("nan"), float("inf"), float("-inf")):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 MathRunnerConfig(model="test-model", request_timeout=value)
-
-    def test_rejects_non_integer_seed_base(self) -> None:
-        for value in (True, 1.5, "42"):
-            with self.subTest(value=value), self.assertRaisesRegex(
-                ValueError, "seed_base must be an integer"
-            ):
-                MathRunnerConfig(model="test-model", seed_base=value)
-
 
 if __name__ == "__main__":
     unittest.main()

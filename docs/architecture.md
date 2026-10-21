@@ -29,7 +29,8 @@ An attempt runner is a callable from `AttemptContext` to `AttemptResult`. It can
 An outcome holds the selected answer, ranked candidates, completed attempts, elapsed time, and stop reason. The evaluator reads this object directly instead of scraping terminal output.
 
 `SolverConfig` validates attempt counts, worker counts, consensus thresholds, and answer bounds when
-it is created, so malformed library configuration fails before any worker threads start.
+it is created, while `MathRunnerConfig` validates integer generation limits before any request is
+sent. Malformed library configuration therefore fails before worker threads or backend calls start.
 
 ## Invariants
 
