@@ -40,6 +40,21 @@ class _ToolThenAnswerBackend:
         )
 
 
+class _PrematureAnswerWithToolCallBackend:
+    def complete(self, **kwargs):
+        return ChatCompletion(
+            text=r"A tentative result is \\boxed{42}.",
+            tool_calls=(
+                ToolCall(
+                    id="call-1",
+                    name="execute_python",
+                    arguments='{"code":"print(6 * 7)"}',
+                ),
+            ),
+            finish_reason="tool_calls",
+        )
+
+
 class _RecordingPythonTool:
     name = "execute_python"
     schema = {"type": "function", "function": {"name": name}}
@@ -96,6 +111,19 @@ class ToolAugmentedMathRunnerTests(unittest.TestCase):
         self.assertEqual(result.finish_reason, "tool_round_limit")
         self.assertEqual(result.python_calls, 0)
         self.assertEqual(tool.timeouts, [])
+
+    def test_does_not_accept_an_answer_from_an_unfinished_tool_call(self) -> None:
+        runner = ToolAugmentedMathRunner(
+            problem="What is 6 times 7?",
+            backend=_PrematureAnswerWithToolCallBackend(),
+            config=MathRunnerConfig(model="test-model", max_tool_rounds=0),
+            python_tool=_RecordingPythonTool(),
+        )
+
+        result = runner(AttemptContext(0, time.monotonic() + 3, Event()))
+
+        self.assertIsNone(result.answer)
+        self.assertEqual(result.finish_reason, "tool_round_limit")
 
     def test_tool_timeout_uses_time_left_after_backend_response(self) -> None:
         tool = _RecordingPythonTool()

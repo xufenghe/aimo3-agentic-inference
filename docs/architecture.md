@@ -37,6 +37,7 @@ sent. Malformed library configuration therefore fails before worker threads or b
 - Deadlines use `time.monotonic()` and are absolute.
 - Only integer answers inside the configured `SolverConfig` bounds may enter consensus, including
   when an application supplies a custom attempt runner instead of the boxed-integer parser.
+- Responses that request a tool cannot contribute an answer until a later tool-free response.
 - Raw vote count outranks entropy-derived confidence.
 - Ties are deterministic.
 - Tool failures remain local to an attempt.

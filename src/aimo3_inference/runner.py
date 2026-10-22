@@ -55,7 +55,7 @@ class ToolAugmentedMathRunner:
         python_calls = 0
         python_errors = 0
         generated_tokens = 0
-        last_text = ""
+        final_text = ""
         finish_reason = "tool_round_limit"
 
         try:
@@ -82,9 +82,8 @@ class ToolAugmentedMathRunner:
                 )
                 token_logprobs.extend(completion.token_logprobs)
                 generated_tokens += self._completion_tokens(completion)
-                last_text = completion.text
-
                 if not completion.tool_calls:
+                    final_text = completion.text
                     finish_reason = completion.finish_reason or "model_final"
                     break
                 if self.python_tool is None:
@@ -120,7 +119,7 @@ class ToolAugmentedMathRunner:
                 if stop_tool_loop:
                     break
 
-            answer = extract_boxed_integer(last_text)
+            answer = extract_boxed_integer(final_text)
             return AttemptResult(
                 attempt_id=context.attempt_id,
                 answer=answer,
