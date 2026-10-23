@@ -46,7 +46,7 @@ sent. Malformed library configuration therefore fails before worker threads or b
 
 ## Cancellation model
 
-Python threads cannot forcibly stop an in-flight HTTP call. The backend request timeout is clipped to the solve's remaining budget, and the orchestrator returns once its absolute deadline is reached. The shared event prevents new model/tool rounds after consensus. For expensive production deployments, pair this with server-side request cancellation or a request proxy that enforces deadlines.
+Python threads cannot forcibly stop an in-flight HTTP call. The backend request timeout is clipped to the solve's remaining budget, and the orchestrator returns once its absolute deadline is reached. A backend response received at or after that deadline is recorded for usage telemetry but cannot contribute an answer. The shared event prevents new model/tool rounds after consensus. For expensive production deployments, pair this with server-side request cancellation or a request proxy that enforces deadlines.
 
 ## Extending the system
 

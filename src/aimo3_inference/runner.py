@@ -80,8 +80,15 @@ class ToolAugmentedMathRunner:
                     top_logprobs=self.config.top_logprobs,
                     reasoning_effort=self.config.reasoning_effort,
                 )
+                completion_received = time.monotonic()
                 token_logprobs.extend(completion.token_logprobs)
                 generated_tokens += self._completion_tokens(completion)
+                if context.stop_event.is_set():
+                    finish_reason = "cancelled"
+                    break
+                if completion_received >= context.deadline:
+                    finish_reason = "deadline"
+                    break
                 if not completion.tool_calls:
                     final_text = completion.text
                     finish_reason = completion.finish_reason or "model_final"

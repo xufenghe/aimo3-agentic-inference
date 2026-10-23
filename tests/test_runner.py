@@ -55,6 +55,15 @@ class _PrematureAnswerWithToolCallBackend:
         )
 
 
+class _FinalAnswerBackend:
+    def complete(self, **kwargs):
+        return ChatCompletion(
+            text=r"The result is \\boxed{42}.",
+            finish_reason="stop",
+            usage={"completion_tokens": 9},
+        )
+
+
 class _RecordingPythonTool:
     name = "execute_python"
     schema = {"type": "function", "function": {"name": name}}
@@ -125,6 +134,23 @@ class ToolAugmentedMathRunnerTests(unittest.TestCase):
         self.assertIsNone(result.answer)
         self.assertEqual(result.finish_reason, "tool_round_limit")
 
+    def test_discards_a_final_answer_received_at_the_deadline(self) -> None:
+        runner = ToolAugmentedMathRunner(
+            problem="What is 6 times 7?",
+            backend=_FinalAnswerBackend(),
+            config=MathRunnerConfig(model="test-model"),
+        )
+
+        with patch(
+            "aimo3_inference.runner.time.monotonic",
+            side_effect=(100.0, 100.1, 101.0, 101.1),
+        ):
+            result = runner(AttemptContext(0, 101.0, Event()))
+
+        self.assertIsNone(result.answer)
+        self.assertEqual(result.finish_reason, "deadline")
+        self.assertEqual(result.generated_tokens, 9)
+
     def test_tool_timeout_uses_time_left_after_backend_response(self) -> None:
         tool = _RecordingPythonTool()
         runner = ToolAugmentedMathRunner(
@@ -136,7 +162,7 @@ class ToolAugmentedMathRunnerTests(unittest.TestCase):
 
         with patch(
             "aimo3_inference.runner.time.monotonic",
-            side_effect=(100.0, 100.1, 100.6, 100.7, 100.8),
+            side_effect=(100.0, 100.1, 100.2, 100.6, 100.7, 100.8, 100.9),
         ):
             result = runner(AttemptContext(0, 101.0, Event()))
 
