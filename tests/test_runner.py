@@ -64,6 +64,19 @@ class _FinalAnswerBackend:
         )
 
 
+class _CancellingFinalAnswerBackend:
+    def __init__(self, stop_event: Event) -> None:
+        self.stop_event = stop_event
+
+    def complete(self, **kwargs):
+        self.stop_event.set()
+        return ChatCompletion(
+            text=r"The result is \\boxed{42}.",
+            finish_reason="stop",
+            usage={"completion_tokens": 9},
+        )
+
+
 class _RecordingPythonTool:
     name = "execute_python"
     schema = {"type": "function", "function": {"name": name}}
@@ -149,6 +162,20 @@ class ToolAugmentedMathRunnerTests(unittest.TestCase):
 
         self.assertIsNone(result.answer)
         self.assertEqual(result.finish_reason, "deadline")
+        self.assertEqual(result.generated_tokens, 9)
+
+    def test_discards_a_final_answer_received_after_cancellation(self) -> None:
+        event = Event()
+        runner = ToolAugmentedMathRunner(
+            problem="What is 6 times 7?",
+            backend=_CancellingFinalAnswerBackend(event),
+            config=MathRunnerConfig(model="test-model"),
+        )
+
+        result = runner(AttemptContext(0, time.monotonic() + 3, event))
+
+        self.assertIsNone(result.answer)
+        self.assertEqual(result.finish_reason, "cancelled")
         self.assertEqual(result.generated_tokens, 9)
 
     def test_tool_timeout_uses_time_left_after_backend_response(self) -> None:
