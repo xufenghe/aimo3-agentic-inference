@@ -91,5 +91,14 @@ class MathRunnerConfig:
             raise ValueError("max_tool_rounds cannot be negative")
         if not math.isfinite(self.request_timeout) or self.request_timeout <= 0:
             raise ValueError("request_timeout must be finite and positive")
-        if not self.reasoning_families:
-            raise ValueError("at least one reasoning family is required")
+        if (
+            not isinstance(self.reasoning_families, tuple)
+            or not self.reasoning_families
+            or any(
+                not isinstance(family, str) or not family.strip()
+                for family in self.reasoning_families
+            )
+        ):
+            raise ValueError(
+                "reasoning_families must be a non-empty tuple of non-empty strings"
+            )

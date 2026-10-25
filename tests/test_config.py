@@ -47,5 +47,13 @@ class MathRunnerConfigTests(unittest.TestCase):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 MathRunnerConfig(model="test-model", request_timeout=value)
 
+    def test_rejects_invalid_reasoning_families(self) -> None:
+        invalid_values = ((), "derive a proof", ("",), ("valid", None))
+        for value in invalid_values:
+            with self.subTest(value=value), self.assertRaisesRegex(
+                ValueError, "non-empty tuple of non-empty strings"
+            ):
+                MathRunnerConfig(model="test-model", reasoning_families=value)
+
 if __name__ == "__main__":
     unittest.main()
