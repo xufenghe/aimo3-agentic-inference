@@ -14,9 +14,14 @@ class InverseEntropyConsensus:
     """Prefer repeated answers, using uncertainty as a confidence tie-breaker."""
 
     def __init__(self, *, entropy_floor: float = 1e-6) -> None:
-        if entropy_floor <= 0:
-            raise ValueError("entropy_floor must be positive")
-        self.entropy_floor = entropy_floor
+        if (
+            isinstance(entropy_floor, bool)
+            or not isinstance(entropy_floor, int | float)
+            or not math.isfinite(entropy_floor)
+            or entropy_floor <= 0
+        ):
+            raise ValueError("entropy_floor must be a finite positive number")
+        self.entropy_floor = float(entropy_floor)
 
     def rank(self, attempts: Iterable[AttemptResult]) -> tuple[CandidateScore, ...]:
         grouped: dict[int, list[float]] = defaultdict(list)

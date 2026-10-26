@@ -16,6 +16,13 @@ class EntropyTests(unittest.TestCase):
 
 
 class ConsensusTests(unittest.TestCase):
+    def test_rejects_invalid_entropy_floor(self) -> None:
+        for value in (True, "0.1", 0, -1, math.nan, math.inf):
+            with self.subTest(value=value), self.assertRaisesRegex(
+                ValueError, "finite positive number"
+            ):
+                InverseEntropyConsensus(entropy_floor=value)
+
     def test_vote_count_precedes_entropy(self) -> None:
         attempts = [
             AttemptResult(0, 42, 1.0),
