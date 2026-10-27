@@ -11,6 +11,12 @@ class EntropyTests(unittest.TestCase):
         entropy = shannon_entropy_from_logprobs({"a": math.log(0.5), "b": math.log(0.5)})
         self.assertAlmostEqual(entropy, 1.0)
 
+    def test_extreme_logprobs_are_normalized_without_overflow_or_underflow(self) -> None:
+        for value in (-1_000.0, 1_000.0):
+            with self.subTest(value=value):
+                entropy = shannon_entropy_from_logprobs({"a": value, "b": value})
+                self.assertAlmostEqual(entropy, 1.0)
+
     def test_empty_mean_is_infinite(self) -> None:
         self.assertTrue(math.isinf(mean_token_entropy([])))
 

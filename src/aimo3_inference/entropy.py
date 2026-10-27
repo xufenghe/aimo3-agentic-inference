@@ -9,7 +9,11 @@ from collections.abc import Iterable, Mapping
 def shannon_entropy_from_logprobs(logprobs: Mapping[object, float]) -> float:
     """Compute base-2 entropy after renormalizing the supplied top log-probabilities."""
 
-    probabilities = [math.exp(value) for value in logprobs.values() if math.isfinite(value)]
+    finite_values = [value for value in logprobs.values() if math.isfinite(value)]
+    if not finite_values:
+        return math.inf
+    maximum = max(finite_values)
+    probabilities = [math.exp(value - maximum) for value in finite_values]
     mass = sum(probabilities)
     if mass <= 0:
         return math.inf
