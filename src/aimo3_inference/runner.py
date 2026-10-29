@@ -14,6 +14,8 @@ from .entropy import mean_token_entropy
 from .models import AttemptContext, AttemptResult, ChatCompletion, ToolCall
 from .tools.python_subprocess import LocalPythonTool
 
+_COMPLETED_FINISH_REASONS = {None, "stop"}
+
 
 class ToolAugmentedMathRunner:
     """Turn one problem into independent, tool-capable model attempts."""
@@ -90,8 +92,9 @@ class ToolAugmentedMathRunner:
                     finish_reason = "deadline"
                     break
                 if not completion.tool_calls:
-                    final_text = completion.text
                     finish_reason = completion.finish_reason or "model_final"
+                    if completion.finish_reason in _COMPLETED_FINISH_REASONS:
+                        final_text = completion.text
                     break
                 if self.python_tool is None:
                     finish_reason = "tool_unavailable"

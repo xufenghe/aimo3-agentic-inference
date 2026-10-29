@@ -56,10 +56,13 @@ class _PrematureAnswerWithToolCallBackend:
 
 
 class _FinalAnswerBackend:
+    def __init__(self, finish_reason: str | None = "stop") -> None:
+        self.finish_reason = finish_reason
+
     def complete(self, **kwargs):
         return ChatCompletion(
             text=r"The result is \\boxed{42}.",
-            finish_reason="stop",
+            finish_reason=self.finish_reason,
             usage={"completion_tokens": 9},
         )
 
@@ -146,6 +149,32 @@ class ToolAugmentedMathRunnerTests(unittest.TestCase):
 
         self.assertIsNone(result.answer)
         self.assertEqual(result.finish_reason, "tool_round_limit")
+
+    def test_does_not_accept_an_answer_from_an_incomplete_generation(self) -> None:
+        for finish_reason in ("length", "content_filter", "tool_calls"):
+            with self.subTest(finish_reason=finish_reason):
+                runner = ToolAugmentedMathRunner(
+                    problem="What is 6 times 7?",
+                    backend=_FinalAnswerBackend(finish_reason),
+                    config=MathRunnerConfig(model="test-model"),
+                )
+
+                result = runner(AttemptContext(0, time.monotonic() + 3, Event()))
+
+                self.assertIsNone(result.answer)
+                self.assertEqual(result.finish_reason, finish_reason)
+
+    def test_accepts_custom_backend_answer_without_a_finish_reason(self) -> None:
+        runner = ToolAugmentedMathRunner(
+            problem="What is 6 times 7?",
+            backend=_FinalAnswerBackend(None),
+            config=MathRunnerConfig(model="test-model"),
+        )
+
+        result = runner(AttemptContext(0, time.monotonic() + 3, Event()))
+
+        self.assertEqual(result.answer, 42)
+        self.assertEqual(result.finish_reason, "model_final")
 
     def test_discards_a_final_answer_received_at_the_deadline(self) -> None:
         runner = ToolAugmentedMathRunner(
