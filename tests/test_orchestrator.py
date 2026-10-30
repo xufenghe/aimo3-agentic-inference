@@ -1,5 +1,6 @@
 import time
 import unittest
+from unittest.mock import patch
 
 from aimo3_inference import (
     AttemptContext,
@@ -23,6 +24,23 @@ class InferenceOrchestratorTests(unittest.TestCase):
         self.assertLess(time.monotonic() - started, 0.15)
         self.assertEqual(outcome.stop_reason, "deadline")
         self.assertIsNone(outcome.answer)
+
+    def test_discards_attempt_observed_at_the_deadline(self) -> None:
+        def runner(context: AttemptContext) -> AttemptResult:
+            return AttemptResult(attempt_id=context.attempt_id, answer=42)
+
+        solver = InferenceOrchestrator(
+            SolverConfig(attempts=1, workers=1, early_stop=1)
+        )
+        with patch(
+            "aimo3_inference.orchestrator.time.monotonic",
+            side_effect=(100.0, 100.0, 100.1, 101.0, 101.1),
+        ):
+            outcome = solver.solve(runner, deadline=101.0)
+
+        self.assertEqual(outcome.stop_reason, "deadline")
+        self.assertIsNone(outcome.answer)
+        self.assertEqual(outcome.attempts_completed, 0)
 
     def test_stops_after_consensus(self) -> None:
         def runner(context: AttemptContext) -> AttemptResult:

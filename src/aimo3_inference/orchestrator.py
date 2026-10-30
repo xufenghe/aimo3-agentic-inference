@@ -59,6 +59,9 @@ class InferenceOrchestrator:
                 if not done:
                     stop_reason = "deadline"
                     break
+                if time.monotonic() >= deadline:
+                    stop_reason = "deadline"
+                    break
 
                 for future in done:
                     try:
