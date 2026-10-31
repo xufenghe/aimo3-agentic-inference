@@ -4,9 +4,12 @@ import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from io import BytesIO
+from pathlib import Path
 from unittest.mock import patch
 
 from aimo3_inference.backends import BackendError, OpenAICompatibleBackend
+
+_VLLM_FIXTURES = Path(__file__).parent / "fixtures" / "vllm"
 
 
 class _Handler(BaseHTTPRequestHandler):
@@ -139,6 +142,30 @@ class OpenAICompatibleBackendTests(unittest.TestCase):
         self.assertEqual(_Handler.authorization, "Bearer local")
         self.assertFalse(_Handler.request_payload["parallel_tool_calls"])
         self.assertEqual(_Handler.request_payload["reasoning_effort"], "high")
+
+    def test_parses_sanitized_vllm_final_response(self) -> None:
+        response = json.loads((_VLLM_FIXTURES / "chat_final.json").read_text())
+
+        completion = OpenAICompatibleBackend._parse_completion(response)
+
+        self.assertEqual(completion.text, r"The verified answer is \boxed{42}.")
+        self.assertEqual(completion.finish_reason, "stop")
+        self.assertEqual(completion.token_logprobs, ({"42": -0.1, "41": -2.4},))
+        self.assertEqual(
+            completion.usage,
+            {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+        )
+
+    def test_parses_sanitized_vllm_tool_response(self) -> None:
+        response = json.loads((_VLLM_FIXTURES / "chat_tool_call.json").read_text())
+
+        completion = OpenAICompatibleBackend._parse_completion(response)
+
+        self.assertEqual(completion.text, "")
+        self.assertEqual(completion.finish_reason, "tool_calls")
+        self.assertEqual(len(completion.tool_calls), 1)
+        self.assertEqual(completion.tool_calls[0].name, "execute_python")
+        self.assertEqual(completion.tool_calls[0].arguments, '{"code":"print(6 * 7)"}')
 
     def test_rejects_malformed_tool_calls_instead_of_silently_dropping_them(self) -> None:
         base_response = {

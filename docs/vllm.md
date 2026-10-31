@@ -50,3 +50,11 @@ Increase concurrency only after the one-attempt tool round-trip works. The relev
 - `--temperature 0` is useful for a deterministic transport smoke test, though it defeats reasoning-path diversity.
 
 The default model name is only a convenience. Any compatible served model may be selected with `--model`.
+
+## Offline response compatibility
+
+The backend parser is covered by synthetic, sanitized vLLM response fixtures for both a
+completed text answer and a structured Python tool call. The fixtures exercise finish reasons,
+usage counters, and the Chat Completions log-probability shape without storing private prompts,
+credentials, or model reasoning. They live under `tests/fixtures/vllm/` and are tested entirely
+offline; passing them does not claim that a live model or GPU deployment was tested.
