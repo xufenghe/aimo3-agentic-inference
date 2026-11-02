@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from .consensus import InverseEntropyConsensus
-from .dataset import wilson_interval
+from .dataset import _parse_identifier, wilson_interval
 from .models import AttemptResult
 
 
@@ -173,7 +173,7 @@ def _parse_replay_record(row: Any, *, source: Path, line_number: int) -> ReplayR
         attempts.append(AttemptResult(attempt_id, answer, entropy))
 
     return ReplayRecord(
-        id=str(row.get("id", line_number)),
+        id=_parse_identifier(row.get("id", line_number), prefix=prefix),
         attempts=tuple(attempts),
         expected=expected,
     )

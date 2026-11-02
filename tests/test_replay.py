@@ -166,6 +166,24 @@ class ReplayTests(unittest.TestCase):
                 ]
             )
 
+    def test_rejects_non_scalar_or_empty_ids(self) -> None:
+        for identifier in (None, True, 1.5, {}, [], "", "   "):
+            with self.subTest(identifier=identifier):
+                with self.assertRaisesRegex(
+                    ValueError, "id must be a non-empty string or integer"
+                ):
+                    self._read([{"id": identifier, "attempts": []}])
+
+    def test_accepts_zero_and_defaults_missing_id_to_line_number(self) -> None:
+        records = self._read(
+            [
+                {"id": 0, "attempts": []},
+                {"attempts": []},
+            ]
+        )
+
+        self.assertEqual([record.id for record in records], ["0", "2"])
+
     def _read(self, rows: list[dict[str, object]]):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "replay.jsonl"

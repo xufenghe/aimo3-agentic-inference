@@ -76,11 +76,24 @@ def wilson_interval(successes: int, total: int) -> tuple[float, float] | None:
 def _parse_record(row: Any, *, source: Path, line_number: int) -> ProblemRecord:
     if not isinstance(row, dict):
         raise ValueError(f"{source}:{line_number}: each row must be a JSON object")
-    identifier = row.get("id", line_number)
+    identifier = _parse_identifier(
+        row.get("id", line_number), prefix=f"{source}:{line_number}"
+    )
     problem = row.get("problem")
     answer = row.get("answer")
     if not isinstance(problem, str) or not problem.strip():
         raise ValueError(f"{source}:{line_number}: problem must be a non-empty string")
     if answer is not None and (isinstance(answer, bool) or not isinstance(answer, int)):
         raise ValueError(f"{source}:{line_number}: answer must be an integer or null")
-    return ProblemRecord(id=str(identifier), problem=problem, answer=answer)
+    return ProblemRecord(id=identifier, problem=problem, answer=answer)
+
+
+def _parse_identifier(value: Any, *, prefix: str) -> str:
+    """Return a stable scalar identifier for evaluation and replay records."""
+
+    if isinstance(value, bool) or not isinstance(value, str | int):
+        raise ValueError(f"{prefix}: id must be a non-empty string or integer")
+    identifier = str(value)
+    if not identifier.strip():
+        raise ValueError(f"{prefix}: id must be a non-empty string or integer")
+    return identifier

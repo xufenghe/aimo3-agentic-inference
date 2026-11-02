@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -37,6 +38,33 @@ class DatasetTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(ValueError, "duplicate id 'same'; first seen on line 1"):
                 list(read_jsonl(path))
+
+    def test_rejects_non_scalar_or_empty_ids(self) -> None:
+        invalid_ids = (None, True, 1.5, {}, [], "", "   ")
+        for identifier in invalid_ids:
+            with self.subTest(identifier=identifier):
+                with tempfile.TemporaryDirectory() as directory:
+                    path = Path(directory) / "bad-id.jsonl"
+                    path.write_text(
+                        json.dumps({"id": identifier, "problem": "p"}) + "\n",
+                        encoding="utf-8",
+                    )
+                    with self.assertRaisesRegex(
+                        ValueError, "id must be a non-empty string or integer"
+                    ):
+                        list(read_jsonl(path))
+
+    def test_accepts_zero_and_defaults_missing_id_to_line_number(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "ids.jsonl"
+            path.write_text(
+                '{"id":0,"problem":"p0"}\n'
+                '{"problem":"p1"}\n',
+                encoding="utf-8",
+            )
+            records = list(read_jsonl(path))
+
+        self.assertEqual([record.id for record in records], ["0", "2"])
 
 
 class WilsonIntervalTests(unittest.TestCase):
