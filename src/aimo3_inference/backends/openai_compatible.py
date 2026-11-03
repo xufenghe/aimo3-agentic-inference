@@ -45,6 +45,49 @@ def _parse_usage(value: object) -> dict[str, int]:
     return parsed
 
 
+def _parse_logprob_rows(value: object) -> tuple[dict[str, float], ...]:
+    if value is None:
+        return ()
+    if not isinstance(value, dict):
+        raise BackendError("choice.logprobs must be an object or null")
+
+    content = value.get("content")
+    if content is None:
+        return ()
+    if not isinstance(content, list):
+        raise BackendError("choice.logprobs.content must be an array or null")
+
+    parsed_rows: list[dict[str, float]] = []
+    for row_index, row in enumerate(content):
+        path = f"choice.logprobs.content[{row_index}]"
+        if not isinstance(row, dict):
+            raise BackendError(f"{path} must be an object")
+
+        values: dict[str, float] = {}
+        top = row.get("top_logprobs")
+        if top is not None:
+            if not isinstance(top, list):
+                raise BackendError(f"{path}.top_logprobs must be an array or null")
+            for item_index, item in enumerate(top):
+                item_path = f"{path}.top_logprobs[{item_index}]"
+                if not isinstance(item, dict):
+                    raise BackendError(f"{item_path} must be an object")
+                token = item.get("token")
+                if not isinstance(token, str):
+                    raise BackendError(f"{item_path}.token must be a string")
+                values[token] = _finite_logprob(
+                    item.get("logprob"), path=f"{item_path}.logprob"
+                )
+
+        if not values:
+            token = row.get("token")
+            if not isinstance(token, str):
+                raise BackendError(f"{path}.token must be a string")
+            values[token] = _finite_logprob(row.get("logprob"), path=f"{path}.logprob")
+        parsed_rows.append(values)
+    return tuple(parsed_rows)
+
+
 class OpenAICompatibleBackend:
     """Call a vLLM or other OpenAI-compatible Chat Completions endpoint."""
 
@@ -226,33 +269,6 @@ class OpenAICompatibleBackend:
                 )
             )
 
-        logprob_rows: list[dict[str, float]] = []
-        logprobs = choice.get("logprobs")
-        content_rows = logprobs.get("content") if isinstance(logprobs, dict) else None
-        if isinstance(content_rows, list):
-            for row_index, row in enumerate(content_rows):
-                if not isinstance(row, dict):
-                    continue
-                top = row.get("top_logprobs")
-                values: dict[str, float] = {}
-                if isinstance(top, list):
-                    for item_index, item in enumerate(top):
-                        if isinstance(item, dict) and "token" in item and "logprob" in item:
-                            values[str(item["token"])] = _finite_logprob(
-                                item["logprob"],
-                                path=(
-                                    "choice.logprobs.content"
-                                    f"[{row_index}].top_logprobs[{item_index}].logprob"
-                                ),
-                            )
-                if not values and "token" in row and "logprob" in row:
-                    values[str(row["token"])] = _finite_logprob(
-                        row["logprob"],
-                        path=f"choice.logprobs.content[{row_index}].logprob",
-                    )
-                if values:
-                    logprob_rows.append(values)
-
         finish_reason = choice.get("finish_reason")
         if finish_reason is not None and not isinstance(finish_reason, str):
             raise BackendError("choice finish_reason must be a string or null")
@@ -260,7 +276,7 @@ class OpenAICompatibleBackend:
         return ChatCompletion(
             text=content or "",
             tool_calls=tuple(calls),
-            token_logprobs=tuple(logprob_rows),
+            token_logprobs=_parse_logprob_rows(choice.get("logprobs")),
             finish_reason=finish_reason,
             usage=_parse_usage(data.get("usage")),
             raw_message=dict(message),

@@ -264,6 +264,42 @@ class OpenAICompatibleBackendTests(unittest.TestCase):
                     with self.assertRaisesRegex(BackendError, error):
                         OpenAICompatibleBackend._parse_completion(response)
 
+    def test_rejects_malformed_logprob_structure(self) -> None:
+        invalid_logprobs = (
+            ([], "choice.logprobs must be an object or null"),
+            ({"content": {}}, "choice.logprobs.content must be an array or null"),
+            ({"content": ["bad-row"]}, r"content\[0\] must be an object"),
+            (
+                {"content": [{"token": "x", "logprob": -0.2, "top_logprobs": {}}]},
+                r"content\[0\]\.top_logprobs must be an array or null",
+            ),
+            (
+                {"content": [{"top_logprobs": ["bad-item"]}]},
+                r"top_logprobs\[0\] must be an object",
+            ),
+            (
+                {"content": [{"top_logprobs": [{"token": 42, "logprob": -0.2}]}]},
+                r"top_logprobs\[0\]\.token must be a string",
+            ),
+            (
+                {"content": [{"token": 42, "logprob": -0.2}]},
+                r"content\[0\]\.token must be a string",
+            ),
+        )
+
+        for logprobs, error in invalid_logprobs:
+            with self.subTest(logprobs=logprobs):
+                response = {
+                    "choices": [
+                        {
+                            "message": {"role": "assistant", "content": "answer"},
+                            "logprobs": logprobs,
+                        }
+                    ]
+                }
+                with self.assertRaisesRegex(BackendError, error):
+                    OpenAICompatibleBackend._parse_completion(response)
+
     def test_rejects_non_text_message_content(self) -> None:
         for content in (42, True, ["answer"], {"text": "answer"}):
             with self.subTest(content=content):
