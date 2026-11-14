@@ -184,6 +184,17 @@ class ReplayTests(unittest.TestCase):
 
         self.assertEqual([record.id for record in records], ["0", "2"])
 
+    def test_rejects_entropy_outside_float_range_with_line_context(self) -> None:
+        with self.assertRaisesRegex(
+            ValueError, r"replay\.jsonl:2: attempt 0 mean_entropy must be"
+        ):
+            self._read(
+                [
+                    {"id": "valid", "attempts": []},
+                    {"id": "invalid", "attempts": [{"answer": 42, "mean_entropy": 10**400}]},
+                ]
+            )
+
     def _read(self, rows: list[dict[str, object]]):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "replay.jsonl"

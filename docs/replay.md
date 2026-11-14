@@ -14,7 +14,8 @@ Each JSONL row represents one problem but deliberately excludes the problem text
 - `expected` is an optional integer gold answer.
 - `attempts` is a list of attempt summaries.
 - `answer` is an integer or `null` when parsing failed.
-- `mean_entropy` is a non-negative number. Use `null` when entropy is unavailable or infinite.
+- `mean_entropy` is a finite non-negative number representable as a Python float. Use `null`
+  when entropy is unavailable or infinite.
 
 The parser accepts only these documented fields. Any additional field at either the record or attempt level is rejected, so replay fixtures do not accidentally retain private problem text, prompts, or model reasoning.
 

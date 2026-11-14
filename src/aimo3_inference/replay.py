@@ -157,19 +157,7 @@ def _parse_replay_record(row: Any, *, source: Path, line_number: int) -> ReplayR
         if answer is not None and (isinstance(answer, bool) or not isinstance(answer, int)):
             raise ValueError(f"{prefix}: attempt {attempt_id} answer must be an integer or null")
         raw_entropy = raw_attempt.get("mean_entropy")
-        if raw_entropy is None:
-            entropy = math.inf
-        elif (
-            isinstance(raw_entropy, bool)
-            or not isinstance(raw_entropy, int | float)
-            or not math.isfinite(raw_entropy)
-            or raw_entropy < 0
-        ):
-            raise ValueError(
-                f"{prefix}: attempt {attempt_id} mean_entropy must be non-negative or null"
-            )
-        else:
-            entropy = float(raw_entropy)
+        entropy = _parse_mean_entropy(raw_entropy, prefix=f"{prefix}: attempt {attempt_id}")
         attempts.append(AttemptResult(attempt_id, answer, entropy))
 
     return ReplayRecord(
@@ -177,6 +165,21 @@ def _parse_replay_record(row: Any, *, source: Path, line_number: int) -> ReplayR
         attempts=tuple(attempts),
         expected=expected,
     )
+
+
+def _parse_mean_entropy(value: Any, *, prefix: str) -> float:
+    if value is None:
+        return math.inf
+    message = f"{prefix} mean_entropy must be a finite non-negative number or null"
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise ValueError(message)
+    try:
+        entropy = float(value)
+    except OverflowError as exc:
+        raise ValueError(message) from exc
+    if not math.isfinite(entropy) or entropy < 0:
+        raise ValueError(message)
+    return entropy
 
 
 def _reject_unknown_fields(row: dict[str, Any], *, allowed: set[str], prefix: str) -> None:
