@@ -22,7 +22,10 @@ _USAGE_TOKEN_FIELDS = ("prompt_tokens", "completion_tokens", "total_tokens")
 def _finite_logprob(value: object, *, path: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise BackendError(f"{path} must be a number")
-    parsed = float(value)
+    try:
+        parsed = float(value)
+    except OverflowError as exc:
+        raise BackendError(f"{path} must be finite") from exc
     if not math.isfinite(parsed):
         raise BackendError(f"{path} must be finite")
     return parsed

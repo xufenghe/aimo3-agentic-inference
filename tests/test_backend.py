@@ -241,6 +241,7 @@ class OpenAICompatibleBackendTests(unittest.TestCase):
             ("-0.2", "must be a number"),
             (math.nan, "must be finite"),
             (math.inf, "must be finite"),
+            (-(10**400), "must be finite"),
         )
 
         for value, error in invalid_values:
@@ -253,6 +254,9 @@ class OpenAICompatibleBackendTests(unittest.TestCase):
                             "logprob": -0.2,
                             "top_logprobs": [{"token": "x", "logprob": value}],
                         }
+                    field = r"choice\.logprobs\.content\[0\]"
+                    if location == "top_logprobs":
+                        field += r"\.top_logprobs\[0\]"
                     response = {
                         "choices": [
                             {
@@ -261,7 +265,7 @@ class OpenAICompatibleBackendTests(unittest.TestCase):
                             }
                         ]
                     }
-                    with self.assertRaisesRegex(BackendError, error):
+                    with self.assertRaisesRegex(BackendError, rf"{field}\.logprob {error}"):
                         OpenAICompatibleBackend._parse_completion(response)
 
     def test_rejects_malformed_logprob_structure(self) -> None:
