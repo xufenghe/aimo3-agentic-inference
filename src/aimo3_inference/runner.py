@@ -96,6 +96,9 @@ class ToolAugmentedMathRunner:
                     if completion.finish_reason in _COMPLETED_FINISH_REASONS:
                         final_text = completion.text
                     break
+                if completion.finish_reason not in {None, "stop", "tool_calls"}:
+                    finish_reason = completion.finish_reason
+                    break
                 if self.python_tool is None:
                     finish_reason = "tool_unavailable"
                     break

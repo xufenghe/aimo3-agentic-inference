@@ -15,8 +15,9 @@ from aimo3_inference.tools import LocalPythonTool
 
 
 class _ToolThenAnswerBackend:
-    def __init__(self) -> None:
+    def __init__(self, tool_finish_reason: str | None = "tool_calls") -> None:
         self.messages = []
+        self.tool_finish_reason = tool_finish_reason
 
     def complete(self, **kwargs):
         self.messages.append(kwargs["messages"])
@@ -30,7 +31,7 @@ class _ToolThenAnswerBackend:
                         arguments='{"code":"print(6 * 7)"}',
                     ),
                 ),
-                finish_reason="tool_calls",
+                finish_reason=self.tool_finish_reason,
             )
         return ChatCompletion(
             text=r"The verified result is \\boxed{42}.",
@@ -41,6 +42,9 @@ class _ToolThenAnswerBackend:
 
 
 class _PrematureAnswerWithToolCallBackend:
+    def __init__(self, finish_reason: str | None = "tool_calls") -> None:
+        self.finish_reason = finish_reason
+
     def complete(self, **kwargs):
         return ChatCompletion(
             text=r"A tentative result is \\boxed{42}.",
@@ -51,7 +55,7 @@ class _PrematureAnswerWithToolCallBackend:
                     arguments='{"code":"print(6 * 7)"}',
                 ),
             ),
-            finish_reason="tool_calls",
+            finish_reason=self.finish_reason,
         )
 
 
@@ -94,21 +98,23 @@ class _RecordingPythonTool:
 
 class ToolAugmentedMathRunnerTests(unittest.TestCase):
     def test_completes_tool_round_trip(self) -> None:
-        backend = _ToolThenAnswerBackend()
-        runner = ToolAugmentedMathRunner(
-            problem="What is 6 times 7?",
-            backend=backend,
-            config=MathRunnerConfig(model="test-model", max_tool_rounds=2),
-            python_tool=LocalPythonTool(timeout=2),
-        )
-        result = runner(AttemptContext(0, time.monotonic() + 3, Event()))
-        self.assertEqual(result.answer, 42)
-        self.assertEqual(result.python_calls, 1)
-        self.assertEqual(result.python_errors, 0)
-        self.assertEqual(result.generated_tokens, 8)
-        second_messages = backend.messages[1]
-        self.assertEqual(second_messages[-1]["role"], "tool")
-        self.assertIn("42", second_messages[-1]["content"])
+        for finish_reason in (None, "stop", "tool_calls"):
+            with self.subTest(finish_reason=finish_reason):
+                backend = _ToolThenAnswerBackend(finish_reason)
+                runner = ToolAugmentedMathRunner(
+                    problem="What is 6 times 7?",
+                    backend=backend,
+                    config=MathRunnerConfig(model="test-model", max_tool_rounds=2),
+                    python_tool=LocalPythonTool(timeout=2),
+                )
+                result = runner(AttemptContext(0, time.monotonic() + 3, Event()))
+                self.assertEqual(result.answer, 42)
+                self.assertEqual(result.python_calls, 1)
+                self.assertEqual(result.python_errors, 0)
+                self.assertEqual(result.generated_tokens, 8)
+                second_messages = backend.messages[1]
+                self.assertEqual(second_messages[-1]["role"], "tool")
+                self.assertIn("42", second_messages[-1]["content"])
 
     def test_honors_preexisting_cancellation(self) -> None:
         event = Event()
@@ -162,6 +168,24 @@ class ToolAugmentedMathRunnerTests(unittest.TestCase):
                 result = runner(AttemptContext(0, time.monotonic() + 3, Event()))
 
                 self.assertIsNone(result.answer)
+                self.assertEqual(result.finish_reason, finish_reason)
+
+    def test_does_not_execute_tools_from_an_incomplete_generation(self) -> None:
+        for finish_reason in ("length", "content_filter", "unknown"):
+            with self.subTest(finish_reason=finish_reason):
+                tool = _RecordingPythonTool()
+                runner = ToolAugmentedMathRunner(
+                    problem="What is 6 times 7?",
+                    backend=_PrematureAnswerWithToolCallBackend(finish_reason),
+                    config=MathRunnerConfig(model="test-model"),
+                    python_tool=tool,
+                )
+
+                result = runner(AttemptContext(0, time.monotonic() + 3, Event()))
+
+                self.assertIsNone(result.answer)
+                self.assertEqual(tool.timeouts, [])
+                self.assertEqual(result.python_calls, 0)
                 self.assertEqual(result.finish_reason, finish_reason)
 
     def test_accepts_custom_backend_answer_without_a_finish_reason(self) -> None:

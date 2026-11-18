@@ -38,6 +38,8 @@ sent. Malformed library configuration therefore fails before worker threads or b
 - Only integer answers inside the configured `SolverConfig` bounds may enter consensus, including
   when an application supplies a custom attempt runner instead of the boxed-integer parser.
 - Responses that request a tool cannot contribute an answer until a later tool-free response.
+- Tool calls are executed only when the finish reason is `tool_calls`, `stop`, or omitted.
+  Interrupted, filtered, and unrecognized finish reasons stop the attempt without running tools.
 - Raw vote count outranks entropy-derived confidence.
 - Ties are deterministic.
 - Tool failures remain local to an attempt.
