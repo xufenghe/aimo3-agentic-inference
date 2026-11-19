@@ -59,6 +59,20 @@ class LocalPythonToolTests(unittest.TestCase):
         self.assertTrue(result.ok, result.error)
         self.assertEqual(result.output, "720")
 
+    def test_does_not_forward_parent_credentials(self) -> None:
+        names = ("AIMO_API_KEY", "OPENAI_API_KEY", "AWS_SECRET_ACCESS_KEY")
+        # Allow os only for this controlled probe; never print credential values.
+        tool = LocalPythonTool(
+            timeout=2,
+            policy=PythonPolicy(allowed_imports=frozenset({"os"})),
+        )
+        code = f"import os\nprint(any(name in os.environ for name in {names!r}))"
+        with patch.dict("os.environ", {name: "synthetic-test-only" for name in names}):
+            result = tool.run(code)
+
+        self.assertTrue(result.ok, result.error)
+        self.assertEqual(result.output, "False")
+
     def test_rejects_blocked_code_without_execution(self) -> None:
         result = LocalPythonTool(timeout=2).run("import subprocess\nprint('bad')")
         self.assertFalse(result.ok)
