@@ -19,6 +19,16 @@ class ExtractBoxedIntegerTests(unittest.TestCase):
         self.assertIsNone(extract_boxed_integer(r"\\boxed{6 * 7}"))
         self.assertIsNone(extract_boxed_integer(r"\\boxed{100000}"))
 
+    def test_rejects_very_long_boxed_integers_without_raising(self) -> None:
+        for digits in ("9" * 10_000, "9" + ",999" * 3_333):
+            with self.subTest(grouped="," in digits):
+                self.assertIsNone(extract_boxed_integer(r"\boxed{" + digits + "}"))
+
+    def test_skips_very_long_box_and_keeps_previous_valid_answer(self) -> None:
+        text = r"\boxed{42}; \boxed{" + "9" * 10_000 + "}"
+
+        self.assertEqual(extract_boxed_integer(text), 42)
+
     def test_does_not_fall_back_to_unboxed_number(self) -> None:
         self.assertIsNone(extract_boxed_integer("The answer is 42."))
 

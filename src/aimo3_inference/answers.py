@@ -32,7 +32,11 @@ def extract_boxed_integer(
             digits = candidate
         if not digits.isdigit():
             continue
-        value = int(digits)
+        try:
+            value = int(digits)
+        except ValueError:
+            # Python limits decimal conversion length; ignore oversized model output.
+            continue
         if minimum <= value <= maximum:
             return value
     return None
