@@ -7,6 +7,7 @@ import math
 import urllib.error
 import urllib.request
 from collections.abc import Mapping, Sequence
+from http.client import HTTPException
 from typing import Any
 
 from ..models import ChatCompletion, ToolCall
@@ -216,7 +217,7 @@ class OpenAICompatibleBackend:
         except urllib.error.HTTPError as exc:
             detail = exc.read(1_000).decode("utf-8", errors="replace")
             raise BackendError(f"backend HTTP {exc.code}: {detail}") from exc
-        except (urllib.error.URLError, TimeoutError) as exc:
+        except (OSError, HTTPException) as exc:
             raise BackendError(f"backend request failed: {exc}") from exc
         except UnicodeDecodeError as exc:
             raise BackendError("backend returned non-UTF-8 content") from exc

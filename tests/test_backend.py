@@ -2,6 +2,7 @@ import json
 import math
 import threading
 import unittest
+from http.client import IncompleteRead, RemoteDisconnected
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from io import BytesIO
 from pathlib import Path
@@ -116,6 +117,31 @@ class OpenAICompatibleBackendTests(unittest.TestCase):
         with patch("urllib.request.urlopen", return_value=BytesIO(b"\xff")):
             with self.assertRaisesRegex(BackendError, "non-UTF-8"):
                 self.backend.list_models()
+
+    def test_wraps_connection_failures_as_backend_errors(self) -> None:
+        for error in (
+            ConnectionResetError("synthetic connection reset"),
+            RemoteDisconnected("synthetic remote disconnect"),
+        ):
+            with self.subTest(error=type(error).__name__), patch(
+                "urllib.request.urlopen", side_effect=error
+            ):
+                with self.assertRaisesRegex(BackendError, "backend request failed") as caught:
+                    self.backend.list_models()
+
+                self.assertIs(caught.exception.__cause__, error)
+
+    def test_wraps_incomplete_response_and_closes_it(self) -> None:
+        response = BytesIO()
+        error = IncompleteRead(b'{"data":', 10)
+        with patch.object(response, "read", side_effect=error), patch(
+            "urllib.request.urlopen", return_value=response
+        ):
+            with self.assertRaisesRegex(BackendError, "backend request failed") as caught:
+                self.backend.complete(model="test-model", messages=[])
+
+        self.assertIs(caught.exception.__cause__, error)
+        self.assertTrue(response.closed)
 
     def test_validates_response_size_limit(self) -> None:
         for value in (True, 0, -1, 1.5):
