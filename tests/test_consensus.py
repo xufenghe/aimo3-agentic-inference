@@ -1,5 +1,6 @@
 import math
 import unittest
+from itertools import permutations
 
 from aimo3_inference.consensus import InverseEntropyConsensus
 from aimo3_inference.entropy import mean_token_entropy, shannon_entropy_from_logprobs
@@ -45,6 +46,45 @@ class ConsensusTests(unittest.TestCase):
             AttemptResult(3, 7, 1.0),
         ]
         self.assertEqual(InverseEntropyConsensus().select(attempts), 42)
+
+    def test_median_entropy_breaks_equal_confidence_tie(self) -> None:
+        attempts = [
+            AttemptResult(0, 42, 1.0),
+            AttemptResult(1, 42, 1.0),
+            AttemptResult(2, 42, 1.0),
+            AttemptResult(3, 7, 0.5),
+            AttemptResult(4, 7, 2.0),
+            AttemptResult(5, 7, 2.0),
+        ]
+
+        ranked = InverseEntropyConsensus().rank(attempts)
+
+        self.assertEqual([item.votes for item in ranked], [3, 3])
+        self.assertEqual([item.confidence_weight for item in ranked], [3.0, 3.0])
+        self.assertEqual([item.median_entropy for item in ranked], [1.0, 2.0])
+        self.assertEqual(ranked[0].answer, 42)
+
+    def test_complete_tie_is_independent_of_attempt_order(self) -> None:
+        attempts = [
+            AttemptResult(0, 42, 0.25),
+            AttemptResult(1, 42, 0.5),
+            AttemptResult(2, 7, 0.25),
+            AttemptResult(3, 7, 0.5),
+        ]
+        selector = InverseEntropyConsensus()
+        expected = selector.rank(attempts)
+        self.assertEqual([item.answer for item in expected], [7, 42])
+
+        for order in permutations(attempts):
+            with self.subTest(order=[item.attempt_id for item in order]):
+                self.assertEqual(selector.rank(iter(order)), expected)
+
+    def test_missing_answers_do_not_create_candidates(self) -> None:
+        selector = InverseEntropyConsensus()
+        for attempts in ([], [AttemptResult(0, None, 0.0)]):
+            with self.subTest(attempts=attempts):
+                self.assertEqual(selector.rank(attempts), ())
+                self.assertIsNone(selector.select(attempts))
 
 
 if __name__ == "__main__":
