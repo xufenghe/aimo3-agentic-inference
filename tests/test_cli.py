@@ -276,6 +276,33 @@ class EvaluateOutputTests(unittest.TestCase):
             self.assertFalse(output.exists())
             self.assertEqual([path.name for path in root.iterdir()], ["problems.jsonl"])
 
+    def test_output_created_during_evaluation_is_not_overwritten(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dataset = root / "problems.jsonl"
+            output = root / "results.jsonl"
+            dataset.write_text('{"id":"one","problem":"1+1","answer":2}\n', encoding="utf-8")
+            args = self._args(dataset, output, overwrite=False)
+            competing_results = b"results published by another evaluation\n"
+
+            def create_competing_output(
+                _record: ProblemRecord, _args: SimpleNamespace
+            ) -> SolveOutcome:
+                output.write_bytes(competing_results)
+                return SolveOutcome(2, 1, False, ())
+
+            with (
+                patch("aimo3_inference.cli._solve_record", side_effect=create_competing_output),
+                redirect_stdout(StringIO()),
+                self.assertRaises(FileExistsError),
+            ):
+                _evaluate(args)
+
+            self.assertEqual(output.read_bytes(), competing_results)
+            self.assertEqual(
+                sorted(path.name for path in root.iterdir()), ["problems.jsonl", "results.jsonl"]
+            )
+
     def test_new_output_is_published_without_overwrite(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
