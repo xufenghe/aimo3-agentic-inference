@@ -11,6 +11,20 @@ from aimo3_inference import (
 
 
 class InferenceOrchestratorTests(unittest.TestCase):
+    def test_rejects_non_finite_deadline_before_starting_workers(self) -> None:
+        solver = InferenceOrchestrator(SolverConfig(attempts=1, workers=1, early_stop=1))
+        for deadline in (float("nan"), float("inf"), float("-inf")):
+            with self.subTest(deadline=deadline), patch(
+                "aimo3_inference.orchestrator.ThreadPoolExecutor",
+                side_effect=AssertionError("worker pool must not start"),
+            ) as pool:
+                with self.assertRaisesRegex(ValueError, "deadline must be"):
+                    solver.solve(
+                        lambda context: AttemptResult(context.attempt_id, 42),
+                        deadline=deadline,
+                    )
+                pool.assert_not_called()
+
     def test_total_deadline_does_not_wait_for_slow_attempt(self) -> None:
         def runner(context: AttemptContext) -> AttemptResult:
             time.sleep(0.2)

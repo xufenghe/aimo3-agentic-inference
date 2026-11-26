@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import time
 from collections import Counter
 from collections.abc import Callable
@@ -24,8 +25,8 @@ class InferenceOrchestrator:
 
     def solve(self, run_attempt: AttemptRunner, *, deadline: float) -> SolveOutcome:
         started = time.monotonic()
-        if deadline <= time.monotonic():
-            raise ValueError("deadline must be in the future and use time.monotonic()")
+        if not math.isfinite(deadline) or deadline <= time.monotonic():
+            raise ValueError("deadline must be finite, in the future, and use time.monotonic()")
 
         completed: list[AttemptResult] = []
         stopped_early = False

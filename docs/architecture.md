@@ -34,7 +34,8 @@ sent. Malformed library configuration therefore fails before worker threads or b
 
 ## Invariants
 
-- Deadlines use `time.monotonic()` and are absolute.
+- Deadlines use `time.monotonic()` and are finite, absolute values. Non-finite or expired
+  deadlines raise `ValueError` before worker threads start.
 - Only integer answers inside the configured `SolverConfig` bounds may enter consensus, including
   when an application supplies a custom attempt runner instead of the boxed-integer parser.
 - Responses that request a tool cannot contribute an answer until a later tool-free response.
