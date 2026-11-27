@@ -7,6 +7,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from io import BytesIO
 from pathlib import Path
 from unittest.mock import patch
+from urllib.error import HTTPError
 
 from aimo3_inference.backends import BackendError, OpenAICompatibleBackend
 
@@ -139,6 +140,22 @@ class OpenAICompatibleBackendTests(unittest.TestCase):
         ):
             with self.assertRaisesRegex(BackendError, "backend request failed") as caught:
                 self.backend.complete(model="test-model", messages=[])
+
+        self.assertIs(caught.exception.__cause__, error)
+        self.assertTrue(response.closed)
+
+    def test_closes_http_error_response_after_reading_bounded_detail(self) -> None:
+        response = BytesIO(b"temporary overload")
+        error = HTTPError(self.backend.models_url, 429, "Too Many Requests", None, response)
+        with patch.object(response, "read", wraps=response.read) as read, patch(
+            "urllib.request.urlopen", side_effect=error
+        ):
+            with self.assertRaisesRegex(
+                BackendError, "backend HTTP 429: temporary overload"
+            ) as caught:
+                self.backend.list_models()
+
+            read.assert_called_once_with(1_000)
 
         self.assertIs(caught.exception.__cause__, error)
         self.assertTrue(response.closed)

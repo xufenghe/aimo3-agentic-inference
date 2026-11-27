@@ -215,7 +215,8 @@ class OpenAICompatibleBackend:
                     )
                 parsed = json.loads(raw.decode("utf-8"))
         except urllib.error.HTTPError as exc:
-            detail = exc.read(1_000).decode("utf-8", errors="replace")
+            with exc:
+                detail = exc.read(1_000).decode("utf-8", errors="replace")
             raise BackendError(f"backend HTTP {exc.code}: {detail}") from exc
         except (OSError, HTTPException) as exc:
             raise BackendError(f"backend request failed: {exc}") from exc
