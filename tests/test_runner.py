@@ -1,3 +1,4 @@
+import json
 import time
 import unittest
 from threading import Event
@@ -115,6 +116,49 @@ class ToolAugmentedMathRunnerTests(unittest.TestCase):
                 second_messages = backend.messages[1]
                 self.assertEqual(second_messages[-1]["role"], "tool")
                 self.assertIn("42", second_messages[-1]["content"])
+
+    def test_recovers_after_a_failed_tool_execution(self) -> None:
+        backend = _ToolThenAnswerBackend()
+        tool = _RecordingPythonTool()
+        failure = ToolExecution(
+            output="partial calculation output",
+            ok=False,
+            elapsed_seconds=0.01,
+            truncated=True,
+            error="python exited with code 1",
+        )
+        runner = ToolAugmentedMathRunner(
+            problem="What is 6 times 7?",
+            backend=backend,
+            config=MathRunnerConfig(model="test-model", max_tool_rounds=1),
+            python_tool=tool,
+        )
+
+        with patch.object(tool, "run", return_value=failure) as execute:
+            result = runner(AttemptContext(0, time.monotonic() + 3, Event()))
+
+        execute.assert_called_once()
+        self.assertEqual(execute.call_args.args, ("print(6 * 7)",))
+        self.assertEqual(len(backend.messages), 2)
+        tool_message = backend.messages[1][-1]
+        self.assertEqual(tool_message["role"], "tool")
+        self.assertEqual(tool_message["tool_call_id"], "call-1")
+        self.assertEqual(tool_message["name"], "execute_python")
+        self.assertEqual(
+            json.loads(tool_message["content"]),
+            {
+                "ok": False,
+                "output": failure.output,
+                "error": failure.error,
+                "truncated": True,
+            },
+        )
+        self.assertEqual(result.answer, 42)
+        self.assertEqual(result.python_calls, 1)
+        self.assertEqual(result.python_errors, 1)
+        self.assertEqual(result.generated_tokens, 8)
+        self.assertEqual(result.finish_reason, "stop")
+        self.assertIsNone(result.error)
 
     def test_honors_preexisting_cancellation(self) -> None:
         event = Event()
